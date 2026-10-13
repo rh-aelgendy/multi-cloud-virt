@@ -87,6 +87,12 @@ class FactoryTests(unittest.TestCase):
         self.assertEqual(root.find('.//u:HideLocalAccountScreen', ns).text, 'true')
         self.assertEqual(root.find('.//u:ComputerName', ns).text, 'TEAMX-AZ-01')
 
+    def test_acm_feedback_uses_controller_field_names(self):
+        item = {'status': {'resourceStatus': {'manifests': [{'statusFeedback': {'values': [
+            {'name': 'phase', 'fieldValue': {'type': 'String', 'string': 'Succeeded'}}]}}]}}}
+        self.assertEqual(factory.feedback_phase(item), 'Succeeded')
+        self.assertIsNone(factory.feedback_phase({}))
+
     def test_install_answer_defaults_to_license_not_accepted(self):
         root = ET.parse(ROOT / 'windows/autounattend.xml').getroot()
         ns = {'u': 'urn:schemas-microsoft-com:unattend'}

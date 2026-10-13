@@ -245,27 +245,45 @@ def stage_dr():
     # The token is sent to ACM via stdin. Never print the ManifestWork body.
     oc('-n', os.environ['DR_CLUSTER'], 'create', '-f', '-', obj=work)
     print('ACM is staging the image to ROSA local storage', flush=True)
+    complete_dr(work)
+
+
+def feedback_phase(item):
+    statuses = item.get('status', {}).get('resourceStatus', {}).get('manifests', [])
+    for status in statuses:
+        for value in status.get('statusFeedback', {}).get('values', []):
+            if value.get('name') == 'phase':
+                return value.get('fieldValue', {}).get('string')
+    return None
+
+
+def complete_dr(work):
+    work_name = work['metadata']['name']
     def imported():
         item = json.loads(oc('-n', os.environ['DR_CLUSTER'], 'get', 'manifestwork', work_name, '-o', 'json'))
-        statuses = item.get('status', {}).get('resourceStatus', {}).get('manifests', [])
-        for status in statuses:
-            for value in status.get('statusFeedbacks', {}).get('values', []):
-                phase = value.get('value', {}).get('string')
-                if value.get('name') == 'phase':
-                    if phase == 'Failed':
-                        raise RuntimeError('ROSA image import failed')
-                    if phase == 'Succeeded':
-                        return True
-        return False
+        phase = feedback_phase(item)
+        if phase == 'Failed':
+            raise RuntimeError('ROSA image import failed')
+        return phase == 'Succeeded'
     wait_for(imported, 'ROSA local image import did not finish', 5400)
-    # Keep the ManifestWork and local golden disk for lifecycle ownership.
-    # Remove the one-time header Secret and CA once CDI has completed its copy.
-    work['spec']['workload']['manifests'] = [m for m in manifests if m['kind'] not in ('Secret', 'ConfigMap')]
-    oc('-n', os.environ['DR_CLUSTER'], 'apply', '-f', '-', obj=work)
-    oc('delete', 'virtualmachineexport', build_id, '--wait=true')
-    oc('delete', 'secret', token_name)
+    # Keep local disks and remove the one-time transfer credentials.
+    work['spec']['workload']['manifests'] = [m for m in work['spec']['workload']['manifests']
+                                            if m['kind'] not in ('Secret', 'ConfigMap')]
+    clean_work = {'apiVersion': work['apiVersion'], 'kind': work['kind'],
+                  'metadata': {'name': work_name, 'namespace': os.environ['DR_CLUSTER']}, 'spec': work['spec']}
+    oc('-n', os.environ['DR_CLUSTER'], 'apply', '-f', '-', obj=clean_work)
+    oc('delete', 'virtualmachineexport', build_id, '--ignore-not-found', '--wait=true')
+    oc('delete', 'secret', build_id + '-export-token', '--ignore-not-found')
     Path(os.environ['RESULT_IMAGE']).write_text(image_name())
     print('ROSA local boot source staged; transfer endpoint and credentials removed', flush=True)
+
+
+def resume_dr():
+    # Completion only: never recreates/replaces a disk, export or token.
+    if get('vmi', build_id) is not None or not get('datasource', image_name()):
+        raise RuntimeError('Completion requires an existing detached golden image')
+    work = json.loads(oc('-n', os.environ['DR_CLUSTER'], 'get', 'manifestwork', image_name() + '-image', '-o', 'json'))
+    complete_dr(work)
 
 
 if __name__ == '__main__':
@@ -275,5 +293,5 @@ if __name__ == '__main__':
         raise ValueError('build-id must be a DNS label of at most 40 characters')
     if not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', version):
         raise ValueError('version must be vMAJOR.MINOR.PATCH')
-    actions = {'prepare': prepare, 'install': install, 'publish': publish, 'stage-dr': stage_dr, 'preflight': preflight}
+    actions = {'prepare': prepare, 'install': install, 'publish': publish, 'stage-dr': stage_dr, 'resume-dr': resume_dr, 'preflight': preflight}
     actions[sys.argv[1]]()

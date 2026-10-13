@@ -31,7 +31,7 @@ flowchart LR
 - GitOps destinations use dedicated `team-x` service accounts and TLS verification. Credentials remain valid until revoked, rather than expiring after a day.
 - Unique Windows Administrator passwords exist only in the per-cluster runtime Secrets, outside Git.
 
-**The Windows image pipeline is running with the user-supplied ISO and explicit license acceptance.** Its completion and first-boot validation will be recorded in the live setup record. The Windows applications remain manual-sync until their golden sources exist. Two additional Fedora VMs are already deployed from the clusters’ existing bootable volumes, and their applications are Synced/Healthy with HTTPS readiness verified.
+**The Windows golden image is ready locally on both clusters, and all four GitOps applications are Synced/Healthy.** Both Windows guests reach the normal lock screen and serve the expected cloud, hostname and `v1.0.0` readiness page. The initial run completed installation, validation, Sysprep, publication and the image copy; its obsolete ACM feedback wait was cancelled after a parser fix. Completion run `team-x-image-complete-mrm82` succeeded and removed the transfer endpoint/credentials. See the live record for the exact UI run history. Linux credentials synchronized successfully after restart.
 
 ## Console login and reusable projects
 
@@ -43,7 +43,7 @@ The existing Fedora VMs use `fedora`; reveal the password from Secret `team-x/li
 
 1. Inspect the ready `team-x-linux-aro` and `team-x-linux-rosa` GitOps applications and their VMs in ACM.
 2. Follow [the ARO console workflow](docs/console-workflow.md) to build a golden image before the talk.
-3. Sync the two Windows applications in ARO GitOps after the pipeline finishes and both local DataSources are ready.
+3. Inspect the healthy Windows applications and their local boot sources on both clusters.
 4. Rehearse using [the 15-minute runbook](docs/demo-runbook.md).
 
 [Deployment and lifecycle details](docs/deployment.md) explain credentials, replacement image releases and cleanup. No prepared demo credential or golden PVC has a 24-hour expiry. Temporary export credentials are created during a build and removed after the copy; they are not required to run the resulting VMs. Keep the underlying clusters/storage available for the presentation.
@@ -67,7 +67,7 @@ The existing Fedora VMs use `fedora`; reveal the password from Secret `team-x/li
 bash scripts/validate.sh
 ```
 
-Offline checks cover YAML/Kustomize, selectors, disk wiring, placement and failure gates. Cluster integration checks are recorded in [the live setup record](docs/live-setup.md). Windows installation, Sysprep, first boot and end-to-end image transfer require the user-supplied ISO and a rehearsal; do not present them as completed until they pass.
+Offline checks cover YAML/Kustomize, selectors, disk wiring, placement and failure gates. Cluster integration checks are recorded in [the live setup record](docs/live-setup.md). Windows installation, Sysprep, first boot and end-to-end image transfer passed in this lab. The live record distinguishes the initial build run from its successful transfer-completion recovery.
 
 ## References
 

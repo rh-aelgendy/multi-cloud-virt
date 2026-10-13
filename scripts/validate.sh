@@ -57,4 +57,4 @@ ruby -ryaml -e '
 ' "$validation_tmp"
 python3 -B scripts/test_factory.py
 bash -n scripts/preflight.sh scripts/validate.sh
-echo 'Offline validation passed. Cluster admission and Windows execution are still pending.'
+echo 'Offline validation passed. See docs/live-setup.md for cluster integration results.'

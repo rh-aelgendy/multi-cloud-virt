@@ -13,7 +13,7 @@
 - Created distinct Windows runtime Secrets on both destinations. Passwords are held only in Kubernetes Secrets.
 - Installed the Team X Windows Golden Image Console YAML sample.
 - Installed ACM inform-only ownership/version policy and confirmed placement selects exactly the two demo clusters.
-- Local YAML/Kustomize, wiring/placement and nine controller/answer-file checks passed.
+- Local YAML/Kustomize, wiring/placement and ten controller/answer-file checks passed.
 
 ## Declarative VMs from existing bootable volumes
 
@@ -25,10 +25,16 @@ Both Linux VMs were restarted after adding Secret-backed guest-agent password pr
 
 The earlier disposable transfer probe was cancelled and its image/export resources removed.
 
-## Windows build in progress
+## Windows image and runtime validation
 
-The user supplied the Microsoft Windows Server 2022 ISO URL and explicitly accepted its evaluation terms. PipelineRun `team-x-image-xnrwn` is running. ISO import and media preparation succeeded. Windows Server 2022 Datacenter Evaluation is installed with its guest agent connected; the pipeline captured successful VirtIO, guest-agent, IIS and HTTP validation. Sysprep shutdown and local golden DataSource publication succeeded. ROSA image staging and runtime first boot are still being completed. The ROSA importer initially exhausted its default memory limit; the operator storage-workload limit was increased to 2Gi. An overlong runtime answer-file command was corrected by moving its script onto the Secret-backed CD; the failed unused ARO runtime clone was recreated from the sealed golden image. The reusable UI sample still defaults to `accept-eula: false` for future runs.
+The user supplied the Microsoft Windows Server 2022 ISO URL and explicitly accepted its evaluation terms. Run `team-x-image-xnrwn` successfully imported/prepared the ISO, installed Windows Server 2022 Datacenter Evaluation, captured VirtIO/guest-agent/IIS/HTTP validation, observed Sysprep shutdown and published the ARO golden DataSource. ACM's CDI copy then succeeded on ROSA.
 
-GitOps applications initially use manual sync. After the image pipeline publishes the ARO source and stages the ROSA source, Sync both applications and validate first boot, QEMU agent, IIS version/cloud identity and restart readiness. Enable self-healing after that rehearsal.
+The original run was cancelled after the copy because its feedback parser used incorrect field names. The parser now reads ACM's actual `statusFeedback.values[].fieldValue.string`, with a regression check. Completion PipelineRun `team-x-image-complete-mrm82` succeeded, verified the real `Succeeded` feedback, retained both golden disks and removed the export and transfer Secrets. Do not describe the original run as entirely green; inspect its successful build tasks and the separate green completion run in the UI.
+
+Both clusters have ready local DataSource `team-x-windows-v1-0-0` (ARO `image-factory`; ROSA `team-x-images`). Both Windows applications are Synced/Healthy. Their HTTPS `/ready.json` endpoints return HTTP 200, version `v1.0.0`, and the correct identities: Azure `TEAMX-AZ-01`, AWS `TEAMX-AWS-01`. Both guest agents connected and console screenshots showed normal Windows lock screens, with no OOBE prompts. Restart readiness passed on both ARO and ROSA, with all four applications returning Synced/Healthy and all four HTTPS readiness endpoints returning HTTP 200.
+
+Integration corrections are retained in source: ROSA's importer limit was raised from `600M` to `2Gi` through the HCO storage settings; runtime scripts are on the Secret-backed CD to respect Windows' 259-character command limit; locale/account settings complete unattended OOBE. The unused ARO runtime clone was recreated while correcting those settings. The sealed golden disk was preserved.
+
+The reusable UI sample still defaults to `accept-eula: false`. Fresh builds require a new build ID and image version. The Windows applications use manual sync; the Linux applications provide the verified automated self-healing demonstration.
 
 ROSA is a hypothetical DR destination: image availability and consistent VM provisioning are demonstrated, not application-data replication or automatic failover.
