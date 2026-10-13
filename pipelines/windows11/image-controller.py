@@ -170,5 +170,12 @@ def publish():
     print('Published persistent ARO-only boot source '+IMAGE, flush=True)
 
 
+def cleanup_inputs():
+    # Per-build inputs only: published disks, DataSources and evidence persist.
+    oc('delete', 'configmap', BUILD+'-answer', '--ignore-not-found')
+    oc('delete', 'service', BUILD, '--ignore-not-found')
+    print('Removed temporary build inputs; retained golden disk and evidence', flush=True)
+
+
 if __name__ == '__main__':
-    {'prepare': prepare, 'validate': validate, 'publish': publish}[sys.argv[1]]()
+    {'prepare': prepare, 'validate': validate, 'publish': publish, 'cleanup-inputs': cleanup_inputs}[sys.argv[1]]()

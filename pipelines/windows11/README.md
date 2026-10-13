@@ -22,9 +22,9 @@ flowchart LR
 - Public desktop folder **Team X Developer Desktop**, containing a Welcome page showing the platform, image version and included software.
 - A sample `README.md` and `hello.ps1` project, plus `C:\TeamX\image.json` with the build version and software version.
 
-The six customization stages are **check-base-and-prepare → clone-base-disk → create-builder → validate-guest-customization → wait-for-sysprep-shutdown → publish-local-golden-image**.
+The main customization stages are **check-base-and-prepare → clone-base-disk → create-builder → validate-guest-customization → wait-for-sysprep-shutdown → publish-local-golden-image**. The visible `finally` tasks are **cleanup-vm** and **cleanup-build-inputs**. They remove the temporary builder VM, firmware/TPM state, answer ConfigMap and validation Service; the root DataVolume/PVC, published DataSource and validation evidence persist independently of the run.
 
-The guest validates Windows 11, guest tools/agent, VS Code system installation/version and CLI execution, the sample project and desktop shortcuts. Publication requires matching captured evidence, observed shutdown and a detached disk. If KubeVirt has already removed the completed VMI, publication verifies the successful native shutdown-wait TaskRun for the same builder and PipelineRun; VMI absence alone is insufficient. A failed customization leaves the builder running for inspection and cannot publish a successful image. After validation passes, the guest deliberately serves its result for three minutes before cleanup and Sysprep; the shutdown-wait stage can remain Running during that window.
+The guest validates Windows 11, guest tools/agent, VS Code system installation/version and CLI execution, the sample project and desktop shortcuts. Guest validation must pass before the upstream `wait-for-vmi-status` task can observe `status.phase == Succeeded`. The upstream `modify-data-object` task then creates the DataSource and waits for Ready, with replacement and PipelineRun ownership disabled. Finally, the upstream `cleanup-vm` task deletes the temporary builder. The pipeline does not require an already-completed VMI to remain present for a second check. A failed customization cannot reach publication; cleanup removes its temporary VM and inputs, while the disk and task logs remain available for diagnosis. After validation passes, the guest deliberately serves its result for three minutes before cleanup and Sysprep; the shutdown-wait stage can remain Running during that window.
 
 ## One-time base build
 
@@ -32,7 +32,7 @@ ARO's built-in `win11` catalog entry initially had no PVC. `windows11-base-image
 
 1. Open ARO Console → Pipelines, project **image-factory**.
 2. Use the **Windows 11 base image — ARO** PipelineRun YAML sample, or import `base-run.example.yaml`.
-3. For new media, supply the Windows 11 ISO HTTPS URL and edition. The installed Console sample instead reuses the lab's prepared `win11-base-build1-iso` media with fresh build/output names (`win11-base-build5` / `win11-base-v1-1-0`). Explicitly set `accept-eula: 'true'` only after accepting the applicable terms.
+3. For new media, supply the Windows 11 ISO HTTPS URL and edition. The installed Console sample instead reuses the lab's prepared `win11-base-build1-iso` media with fresh build/output names (`win11-base-build6` / `win11-base-v1-2-0`). Explicitly set `accept-eula: 'true'` only after accepting the applicable terms.
 4. Retain the `image-builder` service account, `workload=virt` task placement and the UID/GID 107 override for the ISO modification task.
 
 The ISO is imported into a persistent DataVolume. Later base builds can reuse it by setting `iso-dv-name` to that existing name and leaving `iso-url` empty. If the earlier ISO modification task succeeded, also set `iso-already-prepared: 'true'`: the vendor modification is a one-time operation and cannot process its own output again. Supplying a different URL with an existing media name fails rather than replacing the media. The current setup imported `win11-base-build1-iso`; the signed download link stays outside Git. The media/PVCs have no scheduled cleanup.
@@ -44,7 +44,7 @@ Public samples default to **license acceptance false**. No product activation is
 1. In ARO Console, project **image-factory**, select pipeline **windows11-developer-customize**.
 2. Import `customize-run.example.yaml` or select **Team X Windows 11 Developer Desktop — ARO** from the Console YAML samples.
 3. Set `source-image` to the ready generalized base, normally `win11-base-v1-0-0`.
-4. Choose fresh `build-id`, `image-name`, and `image-version` values. The Console customization sample uses `win11-dev-build2`, `win11-dev-v1-1-0`, and `v1.1.0` for a follow-on run.
+4. Choose fresh `build-id`, `image-name`, and `image-version` values. The Console customization sample uses `win11-dev-build3`, `win11-dev-v1-2-0`, and `v1.2.0` for a follow-on run.
 5. Accept the applicable Windows terms, retain `image-builder` and `workload=virt`, then create the PipelineRun.
 6. Open a completed run to show validation evidence and the published boot source while the new run works. A complete installation/customization is longer than a short presentation segment.
 
@@ -66,7 +66,7 @@ oc --context ARO_CONTEXT apply -f pipelines/windows11/clone.example.yaml
 
 The project `windows-vms-vdi` already exists from the compliance demo. On a fresh setup, create it using `examples/windows-vms-vdi/namespace.yaml` first. The default username is **demo**; reveal the password from Secret **win11-dev-01-answer**, key **password**, in that project. No password or token is written to Git or logged by the helper. Existing login Secrets are preserved. The runtime answer file creates a local account and does not use automatic password-bearing logon.
 
-Open the VM's Console/VNC tab, log in, and show the public desktop folder and VS Code shortcut. Open `hello.ps1` and the README in VS Code. The README includes a command that runs the sample with a process-scoped execution policy, avoiding a first-run script-policy prompt. Show the same software/workspace on another clone using unique VM, disk, hostname and Secret names. Keep sealed builder VMs halted; create clones from the DataSource rather than starting the golden source disk.
+Open the VM's Console/VNC tab, log in, and show the public desktop folder and VS Code shortcut. Open `hello.ps1` and the README in VS Code. The README includes a command that runs the sample with a process-scoped execution policy, avoiding a first-run script-policy prompt. Show the same software/workspace on another clone using unique VM, disk, hostname and Secret names. Builder VMs are temporary and removed by cleanup. Create clones from the DataSource; retain its source disk unchanged.
 
 Suggested narration: **“The pipeline turns a clean Windows desktop into our team's standard developer environment. Every VM starts with the same tools and workspace, without repeating the install by hand.”**
 
@@ -78,7 +78,7 @@ oc --context ARO_CONTEXT apply -f console/windows11-samples.yaml
 bash scripts/validate.sh
 ```
 
-This package reuses the existing `image-factory/image-builder` account, its namespace role and the reviewed `modify-windows-iso-file` task/SCC from the earlier demo. A small namespace role permits read-only access to TaskRuns for shutdown evidence. It vendors the upstream `modify-data-object`, `create-vm-from-manifest` and `wait-for-vmi-status` tasks at v0.26.0, with their AMD64 image pinned by digest. Their original license is in `tasks/LICENSE`. No runtime Hub resolver or remote mutable ConfigMap import is used. `image-controller.py` adds preparation, guest evidence validation and safe local publication around the upstream task flow.
+This package reuses the existing `image-factory/image-builder` account, its namespace role and the reviewed `modify-windows-iso-file` task/SCC from the earlier demo. It vendors the upstream `modify-data-object`, `create-vm-from-manifest` `wait-for-vmi-status` and `cleanup-vm` tasks at v0.26.0, with their AMD64 image pinned by digest. Their original license is in `tasks/LICENSE`. No runtime Hub resolver or remote mutable ConfigMap import is used. `image-controller.py` adds preparation, guest evidence validation and temporary input cleanup around the upstream lifecycle tasks.
 
 Live run results will be added after Windows execution and first-boot verification complete.
 

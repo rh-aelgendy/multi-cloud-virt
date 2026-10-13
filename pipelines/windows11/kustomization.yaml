@@ -10,6 +10,7 @@ resources:
 - tasks/modify-data-object.yaml
 - tasks/create-vm-from-manifest.yaml
 - tasks/wait-for-vmi-status.yaml
+- tasks/cleanup-vm.yaml
 configMapGenerator:
 - name: windows11-dev-source
   files:

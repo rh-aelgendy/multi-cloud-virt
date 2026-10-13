@@ -273,34 +273,66 @@ spec:
     - name: failureCondition
       value: status.phase in (Failed, Unknown)
   - name: publish-local-golden-image
+    runAfter:
+    - wait-for-sysprep-shutdown
+    taskRef:
+      name: modify-data-object
+    timeout: 10m
+    params:
+    - name: manifest
+      value: |
+        ---
+        apiVersion: cdi.kubevirt.io/v1beta1
+        kind: DataSource
+        metadata:
+          name: "$(params.image-name)"
+          labels:
+            demo: windows11-developer
+            demo.openshift.io/os: windows11
+            image-version: "$(params.image-version)"
+            instancetype.kubevirt.io/default-preference: windows.11.virtio
+            instancetype.kubevirt.io/default-preference-kind: VirtualMachineClusterPreference
+            instancetype.kubevirt.io/default-instancetype: u1.large
+            instancetype.kubevirt.io/default-instancetype-kind: VirtualMachineClusterInstancetype
+        spec:
+          source:
+            pvc:
+              name: "$(params.build-id)-root"
+              namespace: "$(context.pipelineRun.namespace)"
+    - name: waitForSuccess
+      value: 'true'
+    - name: allowReplace
+      value: 'false'
+    - name: setOwnerReference
+      value: 'false'
+  results:
+  - name: golden-image
+    value: "$(tasks.publish-local-golden-image.results.name)"
+  finally:
+  - when: &1
+    - input: "$(tasks.create-builder.status)"
+      operator: in
+      values:
+      - Succeeded
+    name: cleanup-vm
+    taskRef:
+      name: cleanup-vm
+    timeout: 10m
+    params:
+    - name: vmName
+      value: "$(tasks.create-builder.results.name)"
+    - name: vmNamespace
+      value: "$(tasks.create-builder.results.namespace)"
+    - name: stop
+      value: 'false'
+    - name: delete
+      value: 'true'
+  - when: *1
+    name: cleanup-build-inputs
     taskRef:
       name: windows11-image-action
     params:
-    - name: shutdown-pipeline-run
-      value: "$(context.pipelineRun.name)"
     - name: action
-      value: publish
-    - name: mode
-      value: developer
+      value: cleanup-inputs
     - name: build-id
       value: "$(params.build-id)"
-    - name: image-name
-      value: "$(params.image-name)"
-    - name: image-version
-      value: "$(params.image-version)"
-    - name: source-image
-      value: "$(params.source-image)"
-    - name: iso-url
-      value: "$(params.iso-url)"
-    - name: iso-dv-name
-      value: "$(params.iso-dv-name)"
-    - name: windows-edition
-      value: "$(params.windows-edition)"
-    - name: accept-eula
-      value: "$(params.accept-eula)"
-    timeout: 1h30m
-    runAfter:
-    - wait-for-sysprep-shutdown
-  results:
-  - name: golden-image
-    value: "$(tasks.publish-local-golden-image.results.image-name)"

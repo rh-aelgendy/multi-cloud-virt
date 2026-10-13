@@ -28,11 +28,11 @@ spec:
             workload: virt
       params:
       - name: build-id
-        value: win11-base-build5
+        value: win11-base-build6
       - name: image-name
-        value: win11-base-v1-1-0
+        value: win11-base-v1-2-0
       - name: image-version
-        value: v1.1.0
+        value: v1.2.0
       - name: source-image
         value: win11-base-v1-0-0
       - name: iso-dv-name
@@ -85,11 +85,11 @@ spec:
             workload: virt
       params:
       - name: build-id
-        value: win11-dev-build2
+        value: win11-dev-build3
       - name: image-name
-        value: win11-dev-v1-1-0
+        value: win11-dev-v1-2-0
       - name: image-version
-        value: v1.1.0
+        value: v1.2.0
       - name: source-image
         value: win11-base-v1-0-0
       - name: iso-dv-name
