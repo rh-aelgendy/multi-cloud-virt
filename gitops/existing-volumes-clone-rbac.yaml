@@ -1,0 +1,30 @@
+# Apply on both clusters: clone the existing bootable volumes into team-x.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: team-x-existing-image-cloner
+  namespace: openshift-virtualization-os-images
+rules:
+  - apiGroups: [cdi.kubevirt.io]
+    resources: [datavolumes/source]
+    verbs: [create]
+  - apiGroups: [cdi.kubevirt.io]
+    resources: [datasources]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: team-x-existing-image-cloner
+  namespace: openshift-virtualization-os-images
+subjects:
+  - kind: ServiceAccount
+    name: team-x-gitops
+    namespace: team-x
+  - kind: ServiceAccount
+    name: default
+    namespace: team-x
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: team-x-existing-image-cloner
