@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: live-vms-aro
+  namespace: openshift-gitops
+spec:
+  description: Live ARO Linux production and Windows VDI VMs from local bootable volumes
+  sourceRepos:
+  - https://github.com/rh-aelgendy/multi-cloud-virt.git
+  destinations:
+  - name: acm-hub-aro
+    namespace: linux-vms-prod
+  - name: acm-hub-aro
+    namespace: windows-vms-vdi
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+  - group: kubevirt.io
+    kind: VirtualMachine
+  - group: ''
+    kind: Service
+  - group: route.openshift.io
+    kind: Route

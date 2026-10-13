@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: live-vms-aro
+  namespace: openshift-gitops
+  labels:
+    demo: live-vms-aro
+spec:
+  goTemplate: true
+  goTemplateOptions: [missingkey=error]
+  generators:
+  - list:
+      elements:
+      - appName: live-linux-prod-aro
+        gitPath: linux-prod
+        namespace: linux-vms-prod
+      - appName: live-windows-vdi-aro
+        gitPath: windows-vdi
+        namespace: windows-vms-vdi
+  template:
+    metadata:
+      name: '{{.appName}}'
+      labels:
+        demo: live-vms-aro
+      finalizers:
+      - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: live-vms-aro
+      source:
+        repoURL: https://github.com/rh-aelgendy/multi-cloud-virt.git
+        targetRevision: main
+        path: 'applicationsets/vms/kustomize/{{.gitPath}}'
+      destination:
+        name: acm-hub-aro
+        namespace: '{{.namespace}}'
+      syncPolicy:
+        automated:
+          enabled: true
+          selfHeal: true
+          prune: true
+  syncPolicy:
+    preserveResourcesOnDeletion: false

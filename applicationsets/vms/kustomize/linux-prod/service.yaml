@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: linux-gitops-01
+spec:
+  selector:
+    app: linux-gitops-01
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
