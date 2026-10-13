@@ -24,7 +24,7 @@ flowchart LR
 
 The six customization stages are **check-base-and-prepare → clone-base-disk → create-builder → validate-guest-customization → wait-for-sysprep-shutdown → publish-local-golden-image**.
 
-The guest validates Windows 11, guest tools/agent, VS Code system installation/version and CLI execution, the sample project and desktop shortcuts. Publication requires matching captured evidence, observed shutdown and a detached disk. A failed customization leaves the builder running for inspection and cannot publish a successful image.
+The guest validates Windows 11, guest tools/agent, VS Code system installation/version and CLI execution, the sample project and desktop shortcuts. Publication requires matching captured evidence, observed shutdown and a detached disk. If KubeVirt has already removed the completed VMI, publication verifies the successful native shutdown-wait TaskRun for the same builder and PipelineRun; VMI absence alone is insufficient. A failed customization leaves the builder running for inspection and cannot publish a successful image. After validation passes, the guest deliberately serves its result for three minutes before cleanup and Sysprep; the shutdown-wait stage can remain Running during that window.
 
 ## One-time base build
 
@@ -66,7 +66,7 @@ oc --context ARO_CONTEXT apply -f pipelines/windows11/clone.example.yaml
 
 The project `windows-vms-vdi` already exists from the compliance demo. On a fresh setup, create it using `examples/windows-vms-vdi/namespace.yaml` first. The default username is **demo**; reveal the password from Secret **win11-dev-01-answer**, key **password**, in that project. No password or token is written to Git or logged by the helper. Existing login Secrets are preserved. The runtime answer file creates a local account and does not use automatic password-bearing logon.
 
-Open the VM's Console/VNC tab, log in, and show the public desktop folder and VS Code shortcut. Open `hello.ps1` and the README in VS Code. Show the same software/workspace on another clone using unique VM, disk, hostname and Secret names. Keep sealed builder VMs halted; create clones from the DataSource rather than starting the golden source disk.
+Open the VM's Console/VNC tab, log in, and show the public desktop folder and VS Code shortcut. Open `hello.ps1` and the README in VS Code. The README includes a command that runs the sample with a process-scoped execution policy, avoiding a first-run script-policy prompt. Show the same software/workspace on another clone using unique VM, disk, hostname and Secret names. Keep sealed builder VMs halted; create clones from the DataSource rather than starting the golden source disk.
 
 Suggested narration: **“The pipeline turns a clean Windows desktop into our team's standard developer environment. Every VM starts with the same tools and workspace, without repeating the install by hand.”**
 
@@ -78,7 +78,7 @@ oc --context ARO_CONTEXT apply -f console/windows11-samples.yaml
 bash scripts/validate.sh
 ```
 
-This package reuses the existing `image-factory/image-builder` account, its namespace role and the reviewed `modify-windows-iso-file` task/SCC from the earlier demo. It vendors the upstream `modify-data-object`, `create-vm-from-manifest` and `wait-for-vmi-status` tasks at v0.26.0, with their AMD64 image pinned by digest. Their original license is in `tasks/LICENSE`. No runtime Hub resolver or remote mutable ConfigMap import is used. `image-controller.py` adds preparation, guest evidence validation and safe local publication around the upstream task flow.
+This package reuses the existing `image-factory/image-builder` account, its namespace role and the reviewed `modify-windows-iso-file` task/SCC from the earlier demo. A small namespace role permits read-only access to TaskRuns for shutdown evidence. It vendors the upstream `modify-data-object`, `create-vm-from-manifest` and `wait-for-vmi-status` tasks at v0.26.0, with their AMD64 image pinned by digest. Their original license is in `tasks/LICENSE`. No runtime Hub resolver or remote mutable ConfigMap import is used. `image-controller.py` adds preparation, guest evidence validation and safe local publication around the upstream task flow.
 
 Live run results will be added after Windows execution and first-boot verification complete.
 

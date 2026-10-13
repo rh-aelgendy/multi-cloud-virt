@@ -267,6 +267,8 @@ spec:
     taskRef:
       name: windows11-image-action
     params:
+    - name: shutdown-pipeline-run
+      value: "$(context.pipelineRun.name)"
     - name: action
       value: publish
     - name: mode

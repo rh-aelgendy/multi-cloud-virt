@@ -56,7 +56,9 @@ try {
 Built automatically on Azure Red Hat OpenShift using Tekton and OpenShift Virtualization.
 
 Included: Microsoft VS Code (system installation), VirtIO drivers and QEMU guest agent.
-Open hello.ps1 in VS Code, then run it in PowerShell.
+Open hello.ps1 in VS Code, then run this in its terminal:
+
+    PowerShell -NoProfile -ExecutionPolicy Bypass -File C:\TeamX\workspace\hello.ps1
 This workspace is part of the versioned golden image, so every VM starts consistently.
 '@ | Set-Content "$workspace\README.md" -Encoding UTF8
         & icacls.exe $workspace /grant '*S-1-5-32-545:(OI)(CI)M' /T | Out-Null
