@@ -1,0 +1,89 @@
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: win11-dev-01
+  namespace: windows-vms-vdi
+  labels:
+    owner: team-x
+    app: windows11-developer
+    image-version: v1.0.0
+spec:
+  runStrategy: RerunOnFailure
+  preference:
+    kind: VirtualMachineClusterPreference
+    name: windows.11.virtio
+  template:
+    metadata:
+      labels:
+        app: windows11-developer
+        owner: team-x
+    spec:
+      nodeSelector:
+        workload: virt
+      terminationGracePeriodSeconds: 120
+      domain:
+        cpu:
+          sockets: 2
+          cores: 2
+          threads: 1
+        resources:
+          requests:
+            memory: 8Gi
+        machine:
+          type: q35
+        firmware:
+          bootloader:
+            efi:
+              secureBoot: true
+              persistent: true
+        features:
+          smm:
+            enabled: true
+        devices:
+          tpm:
+            persistent: true
+          disks:
+          - name: root
+            bootOrder: 1
+            disk:
+              bus: virtio
+          - name: answer
+            cdrom:
+              bus: sata
+          interfaces:
+          - name: default
+            model: virtio
+            masquerade: {}
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - name: root
+        dataVolume:
+          name: win11-dev-01-root
+      - name: answer
+        sysprep:
+          secret:
+            name: win11-dev-01-answer
+      readinessProbe:
+        guestAgentPing: {}
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        timeoutSeconds: 5
+  dataVolumeTemplates:
+  - metadata:
+      name: win11-dev-01-root
+    spec:
+      sourceRef:
+        kind: DataSource
+        name: win11-dev-v1-0-0
+        namespace: image-factory
+      storage:
+        storageClassName: anf
+        volumeMode: Filesystem
+        accessModes:
+        - ReadWriteMany
+        resources:
+          requests:
+            storage: 100Gi

@@ -1,0 +1,287 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: windows11-base-image
+  annotations:
+    tekton.dev/displayName: Windows 11 base image — ARO only
+    demo.openshift.io/execution-cluster: aro
+spec:
+  description: ARO-only Windows 11 image workflow based on KubeVirt windows-customize
+    v0.26.0. Local PVCs; no DR transfer.
+  params:
+  - name: build-id
+    type: string
+    default: win11-base-build1
+  - name: image-name
+    type: string
+    default: win11-base-v1-0-0
+  - name: image-version
+    type: string
+    default: v1.0.0
+  - name: source-image
+    type: string
+    default: win11-base-v1-0-0
+  - name: iso-url
+    type: string
+    default: ''
+  - name: iso-dv-name
+    type: string
+    default: win11-pro-install-media
+  - name: windows-edition
+    type: string
+    default: Windows 11 Pro
+  - name: accept-eula
+    type: string
+    default: 'false'
+  tasks:
+  - name: prepare-media
+    taskRef:
+      name: windows11-image-action
+    params:
+    - name: action
+      value: prepare
+    - name: mode
+      value: base
+    - name: build-id
+      value: "$(params.build-id)"
+    - name: image-name
+      value: "$(params.image-name)"
+    - name: image-version
+      value: "$(params.image-version)"
+    - name: source-image
+      value: "$(params.source-image)"
+    - name: iso-url
+      value: "$(params.iso-url)"
+    - name: iso-dv-name
+      value: "$(params.iso-dv-name)"
+    - name: windows-edition
+      value: "$(params.windows-edition)"
+    - name: accept-eula
+      value: "$(params.accept-eula)"
+    timeout: 1h30m
+  - name: modify-windows-iso-file
+    runAfter:
+    - prepare-media
+    taskRef:
+      name: modify-windows-iso-file
+    params:
+    - name: pvcName
+      value: "$(params.iso-dv-name)"
+    timeout: 40m
+  - name: create-builder
+    runAfter:
+    - modify-windows-iso-file
+    taskRef:
+      name: create-vm-from-manifest
+    params:
+    - name: manifest
+      value: |-
+        {
+          "apiVersion": "kubevirt.io/v1",
+          "kind": "VirtualMachine",
+          "metadata": {
+            "name": "$(params.build-id)",
+            "labels": {
+              "demo": "windows11-developer"
+            }
+          },
+          "spec": {
+            "runStrategy": "RerunOnFailure",
+            "preference": {
+              "kind": "VirtualMachineClusterPreference",
+              "name": "windows.11.virtio"
+            },
+            "template": {
+              "metadata": {
+                "labels": {
+                  "image-builder": "$(params.build-id)"
+                }
+              },
+              "spec": {
+                "nodeSelector": {
+                  "workload": "virt"
+                },
+                "terminationGracePeriodSeconds": 120,
+                "domain": {
+                  "cpu": {
+                    "sockets": 2,
+                    "cores": 2,
+                    "threads": 1
+                  },
+                  "resources": {
+                    "requests": {
+                      "memory": "8Gi"
+                    }
+                  },
+                  "machine": {
+                    "type": "q35"
+                  },
+                  "firmware": {
+                    "bootloader": {
+                      "efi": {
+                        "secureBoot": true,
+                        "persistent": true
+                      }
+                    }
+                  },
+                  "features": {
+                    "smm": {
+                      "enabled": true
+                    }
+                  },
+                  "devices": {
+                    "tpm": {
+                      "persistent": true
+                    },
+                    "disks": [
+                      {
+                        "name": "root",
+                        "bootOrder": 1,
+                        "disk": {
+                          "bus": "virtio"
+                        }
+                      },
+                      {
+                        "name": "install",
+                        "bootOrder": 2,
+                        "cdrom": {
+                          "bus": "sata"
+                        }
+                      },
+                      {
+                        "name": "drivers",
+                        "cdrom": {
+                          "bus": "sata"
+                        }
+                      },
+                      {
+                        "name": "answer",
+                        "cdrom": {
+                          "bus": "sata"
+                        }
+                      }
+                    ],
+                    "interfaces": [
+                      {
+                        "name": "default",
+                        "model": "virtio",
+                        "masquerade": {}
+                      }
+                    ]
+                  }
+                },
+                "networks": [
+                  {
+                    "name": "default",
+                    "pod": {}
+                  }
+                ],
+                "volumes": [
+                  {
+                    "name": "root",
+                    "dataVolume": {
+                      "name": "$(params.build-id)-root"
+                    }
+                  },
+                  {
+                    "name": "install",
+                    "dataVolume": {
+                      "name": "$(params.iso-dv-name)"
+                    }
+                  },
+                  {
+                    "name": "drivers",
+                    "containerDisk": {
+                      "image": "registry.redhat.io/container-native-virtualization/virtio-win-rhel9@sha256:9914bc4eeb31de5d2e9b3307f41795253db7f2de4b413f58504faf1dacecbcb4"
+                    }
+                  },
+                  {
+                    "name": "answer",
+                    "sysprep": {
+                      "configMap": {
+                        "name": "$(params.build-id)-answer"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+    - name: runStrategy
+      value: RerunOnFailure
+    - name: setOwnerReference
+      value: 'false'
+  - name: validate-guest-customization
+    taskRef:
+      name: windows11-image-action
+    params:
+    - name: action
+      value: validate
+    - name: mode
+      value: base
+    - name: build-id
+      value: "$(params.build-id)"
+    - name: image-name
+      value: "$(params.image-name)"
+    - name: image-version
+      value: "$(params.image-version)"
+    - name: source-image
+      value: "$(params.source-image)"
+    - name: iso-url
+      value: "$(params.iso-url)"
+    - name: iso-dv-name
+      value: "$(params.iso-dv-name)"
+    - name: windows-edition
+      value: "$(params.windows-edition)"
+    - name: accept-eula
+      value: "$(params.accept-eula)"
+    timeout: 1h30m
+    runAfter:
+    - create-builder
+  - name: wait-for-sysprep-shutdown
+    runAfter:
+    - validate-guest-customization
+    timeout: 30m
+    taskRef:
+      name: wait-for-vmi-status
+    params:
+    - name: vmiName
+      value: "$(params.build-id)"
+    - name: vmiNamespace
+      value: "$(context.pipelineRun.namespace)"
+    - name: successCondition
+      value: status.phase == Succeeded
+    - name: failureCondition
+      value: status.phase in (Failed, Unknown)
+  - name: publish-local-golden-image
+    taskRef:
+      name: windows11-image-action
+    params:
+    - name: action
+      value: publish
+    - name: mode
+      value: base
+    - name: build-id
+      value: "$(params.build-id)"
+    - name: image-name
+      value: "$(params.image-name)"
+    - name: image-version
+      value: "$(params.image-version)"
+    - name: source-image
+      value: "$(params.source-image)"
+    - name: iso-url
+      value: "$(params.iso-url)"
+    - name: iso-dv-name
+      value: "$(params.iso-dv-name)"
+    - name: windows-edition
+      value: "$(params.windows-edition)"
+    - name: accept-eula
+      value: "$(params.accept-eula)"
+    timeout: 1h30m
+    runAfter:
+    - wait-for-sysprep-shutdown
+  results:
+  - name: golden-image
+    value: "$(tasks.publish-local-golden-image.results.image-name)"

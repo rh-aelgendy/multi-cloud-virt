@@ -1,0 +1,21 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: image-factory
+resources:
+- task.yaml
+- base-pipeline.yaml
+- customize-pipeline.yaml
+- tasks/modify-data-object.yaml
+- tasks/create-vm-from-manifest.yaml
+- tasks/wait-for-vmi-status.yaml
+configMapGenerator:
+- name: windows11-dev-source
+  files:
+  - image-controller.py
+  - customize.ps1
+  - base-autounattend.xml
+  - customize-unattend.xml
+  - software.json
+generatorOptions:
+  disableNameSuffixHash: true

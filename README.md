@@ -39,6 +39,10 @@ The existing Fedora VMs use `fedora`; reveal the password from Secret `team-x/li
 
 [Standalone examples](examples/README.md) use `linux-vms-prod` and `windows-vms-vdi`, with complete rendered YAML bundles for console import. The existing workloads stay in `team-x`.
 
+## Windows 11 developer image on ARO
+
+[The ARO-only Windows 11 customization example](pipelines/windows11/README.md) builds a developer golden image with system-wide VS Code, guest tools, desktop shortcuts and a sample Team X workspace, following the upstream KubeVirt Windows customization flow.
+
 ## One-action compliance demo
 
 [Three ACM compliance scenarios](governance/compliance-demo/README.md) are installed in Inform mode: project ownership, a two-VM project quota and golden-image catalog metadata. Each was rehearsed on ARO and ROSA, then reset to NonCompliant for live Enforce from the ACM UI.

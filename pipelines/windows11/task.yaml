@@ -1,0 +1,86 @@
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: windows11-image-action
+spec:
+  params:
+  - name: action
+    type: string
+  - name: mode
+    type: string
+    default: developer
+  - name: build-id
+    type: string
+    default: win11-dev-build1
+  - name: image-name
+    type: string
+    default: win11-dev-v1-0-0
+  - name: image-version
+    type: string
+    default: v1.0.0
+  - name: source-image
+    type: string
+    default: win11-base-v1-0-0
+  - name: iso-url
+    type: string
+    default: ''
+  - name: iso-dv-name
+    type: string
+    default: win11-pro-install-media
+  - name: windows-edition
+    type: string
+    default: Windows 11 Pro
+  - name: accept-eula
+    type: string
+    default: 'false'
+  results:
+  - name: image-name
+  volumes:
+  - name: source
+    configMap:
+      name: windows11-dev-source
+  steps:
+  - name: run
+    image: image-registry.openshift-image-registry.svc:5000/image-factory/windows-factory@sha256:e983b8c86446f0367f6932e94a11a560e670cc11ff8abf1d2dccdd8e6bc1fe68
+    command:
+    - python3
+    - "/opt/source/image-controller.py"
+    args:
+    - "$(params.action)"
+    env:
+    - name: MODE
+      value: "$(params.mode)"
+    - name: BUILD_ID
+      value: "$(params.build-id)"
+    - name: IMAGE_NAME
+      value: "$(params.image-name)"
+    - name: IMAGE_VERSION
+      value: "$(params.image-version)"
+    - name: SOURCE_IMAGE
+      value: "$(params.source-image)"
+    - name: ISO_URL
+      value: "$(params.iso-url)"
+    - name: ISO_DV_NAME
+      value: "$(params.iso-dv-name)"
+    - name: WINDOWS_EDITION
+      value: "$(params.windows-edition)"
+    - name: ACCEPT_EULA
+      value: "$(params.accept-eula)"
+    - name: NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    - name: RESULT_IMAGE
+      value: "$(results.image-name.path)"
+    volumeMounts:
+    - name: source
+      mountPath: "/opt/source"
+    securityContext:
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      seccompProfile:
+        type: RuntimeDefault

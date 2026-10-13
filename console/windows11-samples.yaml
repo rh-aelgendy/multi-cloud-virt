@@ -1,0 +1,100 @@
+---
+apiVersion: console.openshift.io/v1
+kind: ConsoleYAMLSample
+metadata:
+  name: windows11-base-image-build
+spec:
+  title: Windows 11 base image — ARO
+  description: ARO-only Windows 11 image pipeline. Accept the applicable Microsoft
+    terms and choose fresh output/build names. Retain image-builder service account
+    and workload=virt placement.
+  targetResource:
+    apiVersion: tekton.dev/v1
+    kind: PipelineRun
+  yaml: |
+    ---
+    apiVersion: tekton.dev/v1
+    kind: PipelineRun
+    metadata:
+      generateName: windows11-base-image-
+      namespace: image-factory
+    spec:
+      pipelineRef:
+        name: windows11-base-image
+      taskRunTemplate:
+        serviceAccountName: image-builder
+        podTemplate:
+          nodeSelector:
+            workload: virt
+      params:
+      - name: build-id
+        value: win11-base-build1
+      - name: image-name
+        value: win11-base-v1-0-0
+      - name: image-version
+        value: v1.0.0
+      - name: source-image
+        value: win11-base-v1-0-0
+      - name: iso-dv-name
+        value: win11-pro-install-media
+      - name: windows-edition
+        value: Windows 11 Pro
+      - name: accept-eula
+        value: 'false'
+      - name: iso-url
+        value: REPLACE_WITH_WINDOWS11_ISO_HTTPS_URL
+      timeouts:
+        pipeline: 4h
+      taskRunSpecs:
+      - pipelineTaskName: modify-windows-iso-file
+        podTemplate:
+          nodeSelector:
+            workload: virt
+          securityContext:
+            runAsUser: 107
+            fsGroup: 107
+---
+apiVersion: console.openshift.io/v1
+kind: ConsoleYAMLSample
+metadata:
+  name: windows11-customize-image-build
+spec:
+  title: Team X Windows 11 Developer Desktop — ARO
+  description: ARO-only Windows 11 image pipeline. Accept the applicable Microsoft
+    terms and choose fresh output/build names. Retain image-builder service account
+    and workload=virt placement.
+  targetResource:
+    apiVersion: tekton.dev/v1
+    kind: PipelineRun
+  yaml: |
+    ---
+    apiVersion: tekton.dev/v1
+    kind: PipelineRun
+    metadata:
+      generateName: windows11-developer-customize-
+      namespace: image-factory
+    spec:
+      pipelineRef:
+        name: windows11-developer-customize
+      taskRunTemplate:
+        serviceAccountName: image-builder
+        podTemplate:
+          nodeSelector:
+            workload: virt
+      params:
+      - name: build-id
+        value: win11-dev-build2
+      - name: image-name
+        value: win11-dev-v1-1-0
+      - name: image-version
+        value: v1.1.0
+      - name: source-image
+        value: win11-base-v1-0-0
+      - name: iso-dv-name
+        value: win11-pro-install-media
+      - name: windows-edition
+        value: Windows 11 Pro
+      - name: accept-eula
+        value: 'false'
+      timeouts:
+        pipeline: 4h

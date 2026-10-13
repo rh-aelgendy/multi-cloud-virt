@@ -1,0 +1,31 @@
+---
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: windows11-developer-customize-
+  namespace: image-factory
+spec:
+  pipelineRef:
+    name: windows11-developer-customize
+  taskRunTemplate:
+    serviceAccountName: image-builder
+    podTemplate:
+      nodeSelector:
+        workload: virt
+  params:
+  - name: build-id
+    value: win11-dev-build1
+  - name: image-name
+    value: win11-dev-v1-0-0
+  - name: image-version
+    value: v1.0.0
+  - name: source-image
+    value: win11-base-v1-0-0
+  - name: iso-dv-name
+    value: win11-pro-install-media
+  - name: windows-edition
+    value: Windows 11 Pro
+  - name: accept-eula
+    value: 'false'
+  timeouts:
+    pipeline: 4h

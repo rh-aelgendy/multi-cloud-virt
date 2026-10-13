@@ -3,6 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 validation_tmp=$(mktemp -d)
 trap 'rm -rf "$validation_tmp"' EXIT
+oc kustomize pipelines/windows11 > "$validation_tmp/windows11.yaml"
 oc kustomize pipelines > "$validation_tmp/pipelines.yaml"
 oc kustomize vm/overlays/aro > "$validation_tmp/aro.yaml"
 oc kustomize vm/overlays/rosa > "$validation_tmp/rosa.yaml"
@@ -56,5 +57,6 @@ ruby -ryaml -e '
   puts "Verified overlay selectors, disk references, cloud labels and task wiring"
 ' "$validation_tmp"
 python3 -B scripts/test_factory.py
+python3 -B scripts/test_windows11.py
 bash -n scripts/preflight.sh scripts/validate.sh
 echo 'Offline validation passed. See docs/live-setup.md for cluster integration results.'
