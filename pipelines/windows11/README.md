@@ -24,7 +24,7 @@ flowchart LR
 
 The six customization stages are **check-base-and-prepare → clone-base-disk → create-builder → validate-guest-customization → wait-for-sysprep-shutdown → publish-local-golden-image**.
 
-The guest validates Windows 11, guest tools/agent, VS Code system installation/version, the sample project and desktop shortcuts. Publication requires matching captured evidence, observed shutdown and a detached disk. A failed customization leaves the builder running for inspection and cannot publish a successful image.
+The guest validates Windows 11, guest tools/agent, VS Code system installation/version and CLI execution, the sample project and desktop shortcuts. Publication requires matching captured evidence, observed shutdown and a detached disk. A failed customization leaves the builder running for inspection and cannot publish a successful image.
 
 ## One-time base build
 
@@ -81,5 +81,7 @@ bash scripts/validate.sh
 This package reuses the existing `image-factory/image-builder` account, its namespace role and the reviewed `modify-windows-iso-file` task/SCC from the earlier demo. It vendors the upstream `modify-data-object`, `create-vm-from-manifest` and `wait-for-vmi-status` tasks at v0.26.0, with their AMD64 image pinned by digest. Their original license is in `tasks/LICENSE`. No runtime Hub resolver or remote mutable ConfigMap import is used. `image-controller.py` adds preparation, guest evidence validation and safe local publication around the upstream task flow.
 
 Live run results will be added after Windows execution and first-boot verification complete.
+
+If a builder displays a PowerShell error, publication remains blocked. The script copies its startup-resume script from the answer CD; cleanup uses `Remove-Item -Force` because that copy can retain the CD's read-only attribute. Build `windows11-base-image-fw2ms` exposed this issue and was cancelled before publication. Restarting an interrupted Windows Setup did not resume successfully, so the corrected build uses a fresh disk and reuses the already imported ISO. Do not use the failed builder disk as a golden image.
 
 References: [KubeVirt Windows customization source](https://github.com/kubevirt/kubevirt-tekton-tasks/tree/v0.26.0/release/pipelines/windows-customize), [Microsoft VS Code system setup](https://code.visualstudio.com/docs/setup/windows#_install-with-the-system-setup).

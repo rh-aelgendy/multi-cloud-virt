@@ -45,6 +45,8 @@ try {
         $code = "$env:ProgramFiles\Microsoft VS Code\Code.exe"
         if (-not (Test-Path $code)) { throw 'VS Code system installation not found' }
         if ((Get-Item $code).VersionInfo.ProductVersion -notlike '@VSCODE_VERSION@*') { throw 'Unexpected VS Code version' }
+        $cliVersion = & "$env:ProgramFiles\Microsoft VS Code\bin\code.cmd" --version
+        if ($LASTEXITCODE -ne 0 -or $cliVersion[0].Trim() -ne '@VSCODE_VERSION@') { throw 'VS Code CLI validation failed' }
         $workspace = 'C:\TeamX\workspace'
         $desktop = 'C:\Users\Public\Desktop\Team X Developer Desktop'
         New-Item $workspace,$desktop -ItemType Directory -Force | Out-Null
@@ -57,7 +59,9 @@ Included: Microsoft VS Code (system installation), VirtIO drivers and QEMU guest
 Open hello.ps1 in VS Code, then run it in PowerShell.
 This workspace is part of the versioned golden image, so every VM starts consistently.
 '@ | Set-Content "$workspace\README.md" -Encoding UTF8
-        'Write-Host "Hello from Team X!" -ForegroundColor Cyan; Get-ComputerInfo | Select-Object CsName,WindowsProductName' | Set-Content "$workspace\hello.ps1" -Encoding UTF8
+        & icacls.exe $workspace /grant '*S-1-5-32-545:(OI)(CI)M' /T | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'Workspace permissions could not be configured' }
+        'Write-Host "Hello from Team X!" -ForegroundColor Cyan; Get-CimInstance Win32_OperatingSystem | Select-Object CSName,Caption,Version,BuildNumber' | Set-Content "$workspace\hello.ps1" -Encoding UTF8
         $info = @{ team='team-x'; platform='ARO'; os=$os; imageVersion=$version; vscodeVersion='@VSCODE_VERSION@'; builtAt=(Get-Date).ToUniversalTime().ToString('o') }
         $info | ConvertTo-Json | Set-Content C:\TeamX\image.json -Encoding UTF8
         "<html><head><title>Team X Developer Desktop</title></head><body style='font:22px Segoe UI;padding:40px;background:#112233;color:white'><h1>Team X Developer Desktop</h1><p>Built on ARO using Tekton</p><p>Windows 11 + VS Code @VSCODE_VERSION@ + VirtIO/QEMU tools</p><p>Golden image: $version</p><p>Open the Team X workspace shortcut to inspect README.md and hello.ps1.</p></body></html>" | Set-Content "$desktop\Welcome.html" -Encoding UTF8
@@ -68,11 +72,12 @@ This workspace is part of the versioned golden image, so every VM starts consist
         $link.WorkingDirectory = $workspace
         $link.Save()
         if (-not (Test-Path "$workspace\hello.ps1") -or -not (Test-Path 'C:\Users\Public\Desktop\Team X - VS Code.lnk')) { throw 'Desktop customization is incomplete' }
-        $checks += @('vscode-system-install','sample-project','desktop-shortcuts')
+        $checks += @('vscode-system-install','vscode-cli','sample-project','desktop-shortcuts')
         Remove-Item $setup
     }
     if ((Get-BitLockerVolume -MountPoint C:).VolumeStatus -ne 'FullyDecrypted') { throw 'Golden disks must be fully decrypted before Sysprep and cloning' }
     $result = @{ passed=$true; mode=$mode; version=$version; os=$os; checks=$checks }
+    if ($mode -eq 'developer') { $result.vscodeVersion='@VSCODE_VERSION@'; $result.workspace='C:\TeamX\workspace'; $result.desktopShortcut='Team X - VS Code' }
     $json = $result | ConvertTo-Json -Depth 4
     $json | Set-Content "$root\validation.json" -Encoding UTF8
     New-NetFirewallRule -DisplayName 'Temporary Image Factory Validation' -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow | Out-Null
@@ -96,8 +101,8 @@ This workspace is part of the versioned golden image, so every VM starts consist
     $listener.Stop()
     Remove-NetFirewallRule -DisplayName 'Temporary Image Factory Validation'
     Unregister-ScheduledTask Win11ImageFactory -Confirm:$false
-    Remove-Item "$root\resume.ps1"
-    Remove-Item C:\Windows\Panther\unattend.xml,C:\Windows\Panther\Unattend\unattend.xml -ErrorAction SilentlyContinue
+    Remove-Item "$root\resume.ps1" -Force
+    Remove-Item C:\Windows\Panther\unattend.xml,C:\Windows\Panther\Unattend\unattend.xml -Force -ErrorAction SilentlyContinue
     $answer = Get-PSDrive -PSProvider FileSystem | Where-Object { Test-Path (Join-Path $_.Root 'customize.ps1') } | Select-Object -First 1
     if ($answer) {
         (New-Object -ComObject Shell.Application).NameSpace(17).ParseName($answer.Name+':').InvokeVerb('Eject')

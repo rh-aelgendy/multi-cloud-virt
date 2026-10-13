@@ -109,7 +109,7 @@ def validate():
             return None
         expected = {'windows11', 'virtio-tools', 'guest-agent'}
         if MODE == 'developer':
-            expected.update({'vscode-system-install', 'sample-project', 'desktop-shortcuts'})
+            expected.update({'vscode-system-install', 'vscode-cli', 'sample-project', 'desktop-shortcuts'})
         if (result.get('passed') is not True or result.get('version') != VERSION or result.get('mode') != MODE
                 or set(result.get('checks', [])) != expected):
             raise RuntimeError('Guest validation failed')
