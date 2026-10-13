@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Create a per-cloud OOBE answer Secret without placing credentials in Git."""
 import argparse
-import base64
 import getpass
 import json
 import re
@@ -9,31 +8,40 @@ import subprocess
 from xml.sax.saxutils import escape
 
 
-def answer(hostname, cloud, password, version):
+def specialize_script(cloud, version, hostname):
     # Specialize runs as SYSTEM: no password-bearing auto-logon is needed.
     script = r"""
 $ErrorActionPreference = 'Stop'
 $image = Get-Content C:\TeamX\image.json -Raw | ConvertFrom-Json
 if ($image.version -ne 'VERSION' -or $image.team -ne 'team-x') { throw 'Unexpected golden image' }
-$info = @{ team = 'team-x'; cloud = 'CLOUD'; hostname = $env:COMPUTERNAME; version = $image.version }
+$info = @{ team = 'team-x'; cloud = 'CLOUD'; hostname = 'HOSTNAME'; version = $image.version }
 $info | ConvertTo-Json | Set-Content C:\inetpub\wwwroot\ready.json -Encoding UTF8
-$html = '<!doctype html><html><head><title>Team X Windows</title><style>body{background:#101820;color:#fff;font:24px Segoe UI;padding:70px}h1{color:#73d8ff}p{margin:24px 0}</style></head><body><h1>Team X | Windows VM</h1><p>Cloud: CLOUD</p><p>Hostname: ' + $env:COMPUTERNAME + '</p><p>Golden image: ' + $image.version + '</p><p>One operating model. Two clouds.</p></body></html>'
+$html = '<!doctype html><html><head><title>Team X Windows</title><style>body{background:#101820;color:#fff;font:24px Segoe UI;padding:70px}h1{color:#73d8ff}p{margin:24px 0}</style></head><body><h1>Team X | Windows VM</h1><p>Cloud: CLOUD</p><p>Hostname: ' + 'HOSTNAME' + '</p><p>Golden image: ' + $image.version + '</p><p>One operating model. Two clouds.</p></body></html>'
 $html | Set-Content C:\inetpub\wwwroot\index.html -Encoding UTF8
 Remove-Item C:\inetpub\wwwroot\iisstart.htm -ErrorAction SilentlyContinue
 Remove-Item C:\inetpub\wwwroot\validation.json -ErrorAction SilentlyContinue
-""".replace('VERSION', version).replace('CLOUD', cloud)
-    encoded = base64.b64encode(script.encode('utf-16le')).decode()
+""".replace('VERSION', version).replace('CLOUD', cloud).replace('HOSTNAME', hostname)
+    return script
+
+
+def answer(hostname, cloud, password, version):
+    # The Deployment Path field is limited to 259 characters by Windows Setup.
+    command = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Get-PSDrive -PSProvider FileSystem | ForEach-Object { $p=Join-Path $_.Root \'specialize.ps1\'; if(Test-Path $p){ & $p } }"'
+    assert len(command) <= 259
     return f'''<?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
   <settings pass="specialize">
     <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS"><ComputerName>{hostname}</ComputerName></component>
     <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-      <RunSynchronous><RunSynchronousCommand wcm:action="add"><Order>1</Order><Path>powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand {encoded}</Path></RunSynchronousCommand></RunSynchronous>
+      <RunSynchronous><RunSynchronousCommand wcm:action="add"><Order>1</Order><Path>{escape(command)}</Path></RunSynchronousCommand></RunSynchronous>
     </component>
   </settings>
   <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>en-US</InputLocale><SystemLocale>en-US</SystemLocale><UILanguage>en-US</UILanguage><UserLocale>en-US</UserLocale>
+    </component>
     <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-      <OOBE><HideEULAPage>true</HideEULAPage><HideOEMRegistrationScreen>true</HideOEMRegistrationScreen><HideOnlineAccountScreens>true</HideOnlineAccountScreens><HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE><ProtectYourPC>1</ProtectYourPC></OOBE>
+      <OOBE><HideEULAPage>true</HideEULAPage><HideLocalAccountScreen>true</HideLocalAccountScreen><HideOEMRegistrationScreen>true</HideOEMRegistrationScreen><HideOnlineAccountScreens>true</HideOnlineAccountScreens><HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE><ProtectYourPC>1</ProtectYourPC></OOBE>
       <UserAccounts><AdministratorPassword><Value>{escape(password)}</Value><PlainText>true</PlainText></AdministratorPassword></UserAccounts>
       <TimeZone>UTC</TimeZone>
     </component>
@@ -62,7 +70,9 @@ if __name__ == '__main__':
     subprocess.run(['oc', '--context', args.context, 'apply', '-f', '-'], input=json.dumps(ns), text=True, check=True)
     secret = {'apiVersion': 'v1', 'kind': 'Secret', 'metadata': {
         'name': args.secret_name, 'namespace': args.namespace}, 'type': 'Opaque',
-        'stringData': {'unattend.xml': answer(args.hostname, args.cloud, password, args.version)}}
+        'stringData': {'unattend.xml': answer(args.hostname, args.cloud, password, args.version),
+                       'specialize.ps1': specialize_script(args.cloud, args.version, args.hostname),
+                       'username': 'Administrator', 'password': password}}
     subprocess.run(['oc', '--context', args.context, 'apply', '-f', '-'],
                    input=json.dumps(secret), text=True, check=True, capture_output=True)
     print(f'Created/updated {args.secret_name} in {args.namespace} on {args.context}; no credentials written locally.')

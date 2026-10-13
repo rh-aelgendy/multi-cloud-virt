@@ -1,0 +1,9 @@
+spec:
+  storage:
+    workloadResourceRequirements:
+      limits:
+        cpu: 750m
+        memory: 2Gi
+      requests:
+        cpu: 100m
+        memory: 256Mi

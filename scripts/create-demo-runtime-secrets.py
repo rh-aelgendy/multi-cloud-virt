@@ -26,6 +26,7 @@ for context, cloud, hostname in [(args.aro_context, 'azure', 'TEAMX-AZ-01'),
     secret = {'apiVersion': 'v1', 'kind': 'Secret', 'metadata': {'name': name, 'namespace': 'team-x',
                'labels': {'demo': 'vm-islands'}}, 'stringData': {
                'unattend.xml': runtime.answer(hostname, cloud, password, 'v1.0.0'),
+               'specialize.ps1': runtime.specialize_script(cloud, 'v1.0.0', hostname),
                'username': 'Administrator', 'password': password}}
     subprocess.run(['oc', '--context', context, 'create', '-f', '-'], input=json.dumps(secret),
                    capture_output=True, text=True, check=True)

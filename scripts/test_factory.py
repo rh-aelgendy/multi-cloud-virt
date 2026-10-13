@@ -82,6 +82,9 @@ class FactoryTests(unittest.TestCase):
         ns = {'u': 'urn:schemas-microsoft-com:unattend'}
         self.assertEqual(root.find('.//u:AdministratorPassword/u:Value', ns).text, password)
         self.assertIsNone(root.find('.//u:AutoLogon', ns))
+        self.assertLessEqual(len(root.find('.//u:RunSynchronousCommand/u:Path', ns).text), 259)
+        self.assertEqual(root.find('.//u:UILanguage', ns).text, 'en-US')
+        self.assertEqual(root.find('.//u:HideLocalAccountScreen', ns).text, 'true')
         self.assertEqual(root.find('.//u:ComputerName', ns).text, 'TEAMX-AZ-01')
 
     def test_install_answer_defaults_to_license_not_accepted(self):

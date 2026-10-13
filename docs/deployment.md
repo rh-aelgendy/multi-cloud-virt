@@ -61,3 +61,16 @@ A new image version requires a fresh build ID, DataSource, VM name, disk name an
 Cleanup is deliberate: disable/remove GitOps applications with resource preservation first; inspect VM/PVC ownership and reclaim policy before deleting disks. Removing a VM-owned DataVolume may delete backing ANF storage; ROSA's Trident class uses Retain and can leave backing storage requiring explicit cleanup. Remove only the demo's named resources, ManifestWorks, export tokens and workspace PVCs. Deleting a retained image ManifestWork can remove the managed ROSA golden-image resources it owns.
 
 Revoke GitOps credentials by deleting `team-x-gitops-token` on each destination and the corresponding Argo cluster Secret. Remove the approved SCC binding/role/SCC when the image factory is retired. No routine cleanup is scheduled to expire or delete the lab before the presentation.
+
+## ROSA image importer memory
+
+The live Windows image import exceeded CDI's default `600M` memory limit. The ROSA HyperConverged operator now configures storage workloads with a `2Gi` limit and `256Mi` request. To reproduce this setting through the operator API:
+
+```bash
+oc --context ROSA_CONTEXT -n openshift-cnv patch hyperconverged kubevirt-hyperconverged \
+  --type=merge --patch-file tools/rosa-storage-resources.patch.yaml
+```
+
+This affects CDI storage workload pods on ROSA. It does not change host configuration or VM placement. Existing importer pods must be recreated to receive the setting; image PVCs must be retained.
+
+The runtime answer Secret carries `specialize.ps1` alongside `unattend.xml`. Windows Setup runs a short command to locate that script on the answer CD. Microsoft's [Deployment Path limit](https://learn.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-deployment-runsynchronous-runsynchronouscommand-path) is 259 characters; the helper checks that limit before returning its XML.

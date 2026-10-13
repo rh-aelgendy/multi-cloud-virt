@@ -37,7 +37,7 @@ oc --context ARO_CONTEXT apply -f examples/windows-vms-vdi/clone-permissions.aro
 oc --context ARO_CONTEXT apply -k examples/windows-vms-vdi/aro
 ```
 
-For ROSA, use `ROSA_CONTEXT`, `--cloud aws`, `--hostname VDI-AWS-01` and the `rosa` paths. The helper prompts for the Administrator password, writes it directly into the answer Secret, and does not log it or save it locally. Each clone gets its own hostname/password; changing an answer Secret after specialization does not reset an existing Windows password.
+For ROSA, use `ROSA_CONTEXT`, `--cloud aws`, `--hostname VDI-AWS-01` and the `rosa` paths. The helper prompts for the Administrator password, writes it directly into the answer Secret (key `password`), and does not log it or save it locally. Each clone gets its own hostname/password; changing an answer Secret after specialization does not reset an existing Windows password.
 
 The application Route is `windows-vdi-web`.
 

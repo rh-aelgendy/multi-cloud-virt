@@ -21,11 +21,13 @@ Both `team-x-linux` VMs are running from their clusters’ existing Fedora DataS
 
 The GitOps instance uses strict RBAC handling and a resource-type inclusion list scoped to the two demo clusters. Its cache issue was resolved without granting the destination accounts cluster-admin.
 
+Both Linux VMs were restarted after adding Secret-backed guest-agent password propagation. Both report `AccessCredentialsSynchronized=True`, and their HTTPS readiness checks still return HTTP 200. Log in as `fedora` using the password from the local `team-x/linux-vm-login` Secret, key `fedora`.
+
 The earlier disposable transfer probe was cancelled and its image/export resources removed.
 
 ## Windows build in progress
 
-The user supplied the Microsoft Windows Server 2022 ISO URL and explicitly accepted its evaluation terms. PipelineRun `team-x-image-xnrwn` is running. ISO import and media preparation succeeded. Windows Server 2022 Datacenter Evaluation is installed with its guest agent connected; the pipeline captured successful VirtIO, guest-agent, IIS and HTTP validation. Generalization, image staging and runtime first boot are still being completed. The reusable UI sample still defaults to `accept-eula: false` for future runs.
+The user supplied the Microsoft Windows Server 2022 ISO URL and explicitly accepted its evaluation terms. PipelineRun `team-x-image-xnrwn` is running. ISO import and media preparation succeeded. Windows Server 2022 Datacenter Evaluation is installed with its guest agent connected; the pipeline captured successful VirtIO, guest-agent, IIS and HTTP validation. Sysprep shutdown and local golden DataSource publication succeeded. ROSA image staging and runtime first boot are still being completed. The ROSA importer initially exhausted its default memory limit; the operator storage-workload limit was increased to 2Gi. An overlong runtime answer-file command was corrected by moving its script onto the Secret-backed CD; the failed unused ARO runtime clone was recreated from the sealed golden image. The reusable UI sample still defaults to `accept-eula: false` for future runs.
 
 GitOps applications initially use manual sync. After the image pipeline publishes the ARO source and stages the ROSA source, Sync both applications and validate first boot, QEMU agent, IIS version/cloud identity and restart readiness. Enable self-healing after that rehearsal.
 
