@@ -23,6 +23,8 @@ spec:
     value: win11-base-v1-0-0
   - name: iso-dv-name
     value: win11-pro-install-media
+  - name: iso-already-prepared
+    value: 'false'
   - name: windows-edition
     value: Windows 11 Pro
   - name: accept-eula

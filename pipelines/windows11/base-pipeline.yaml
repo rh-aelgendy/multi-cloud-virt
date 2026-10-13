@@ -28,6 +28,10 @@ spec:
   - name: iso-dv-name
     type: string
     default: win11-pro-install-media
+  - name: iso-already-prepared
+    type: string
+    default: 'false'
+    description: Set true only for media successfully processed by modify-windows-iso-file.
   - name: windows-edition
     type: string
     default: Windows 11 Pro
@@ -61,6 +65,10 @@ spec:
       value: "$(params.accept-eula)"
     timeout: 1h30m
   - name: modify-windows-iso-file
+    when:
+    - input: "$(params.iso-already-prepared)"
+      operator: in
+      values: ['false']
     runAfter:
     - prepare-media
     taskRef:
