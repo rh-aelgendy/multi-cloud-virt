@@ -1,0 +1,36 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: team-x-windows
+  namespace: openshift-gitops
+spec:
+  goTemplate: true
+  goTemplateOptions:
+  - missingkey=error
+  generators:
+  - list:
+      elements:
+      - cluster: acm-hub-aro
+        overlay: aro
+      - cluster: rosa-virt-dr
+        overlay: rosa
+  template:
+    metadata:
+      name: team-x-windows-{{.overlay}}
+    spec:
+      project: team-x-vms
+      source:
+        repoURL: https://github.com/rh-aelgendy/multi-cloud-virt.git
+        targetRevision: main
+        path: vm/overlays/{{.overlay}}
+      destination:
+        name: "{{.cluster}}"
+        namespace: team-x
+      syncPolicy:
+        automated:
+          selfHeal: true
+          prune: false
+          enabled: false
+  syncPolicy:
+    preserveResourcesOnDeletion: true

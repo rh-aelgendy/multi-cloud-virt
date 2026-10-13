@@ -1,0 +1,41 @@
+---
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: platform-readiness-
+  namespace: image-factory
+spec:
+  pipelineRef:
+    name: team-x-platform-readiness
+  taskRunTemplate:
+    serviceAccountName: image-builder
+    podTemplate:
+      nodeSelector:
+        workload: virt
+  params:
+  - name: toolbox-image
+    value: image-registry.openshift-image-registry.svc:5000/image-factory/windows-factory:demo
+  - name: version
+    value: v1.0.0
+  - name: accept-eula
+    value: 'false'
+  - name: storage-class
+    value: anf
+  - name: virtio-image
+    value: registry.redhat.io/container-native-virtualization/virtio-win-rhel9@sha256:9914bc4eeb31de5d2e9b3307f41795253db7f2de4b413f58504faf1dacecbcb4
+  - name: dr-cluster
+    value: rosa-virt-dr
+  - name: dr-storage-class
+    value: trident-csi
+  workspaces:
+  - name: artifacts
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteMany
+        storageClassName: anf
+        resources:
+          requests:
+            storage: 1Gi
+  timeouts:
+    pipeline: 10m

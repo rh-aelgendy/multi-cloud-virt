@@ -1,0 +1,18 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: image-factory
+resources:
+- "../windows"
+- namespace.yaml
+- rbac.yaml
+- task.yaml
+- pipeline.yaml
+- modify-windows-iso-file.yaml
+- preflight-pipeline.yaml
+configMapGenerator:
+- name: factory-scripts
+  files:
+  - factory.py
+generatorOptions:
+  disableNameSuffixHash: true

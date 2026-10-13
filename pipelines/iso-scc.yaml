@@ -1,0 +1,52 @@
+# The vendor ISO task requires UID/GID 107. This permits only that identity,
+# unlike anyuid. Apply only after approval; remove when the demo is retired.
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: team-x-iso-builder
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegedContainer: false
+allowPrivilegeEscalation: false
+defaultAllowPrivilegeEscalation: false
+readOnlyRootFilesystem: false
+requiredDropCapabilities: [ALL]
+runAsUser:
+  type: MustRunAs
+  uid: 107
+fsGroup:
+  type: MustRunAs
+  ranges: [{min: 107, max: 107}]
+supplementalGroups:
+  type: MustRunAs
+  ranges: [{min: 107, max: 107}]
+seLinuxContext:
+  type: MustRunAs
+seccompProfiles: [runtime/default]
+volumes: [configMap, downwardAPI, emptyDir, persistentVolumeClaim, projected, secret]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: team-x-use-iso-scc
+rules:
+  - apiGroups: [security.openshift.io]
+    resources: [securitycontextconstraints]
+    resourceNames: [team-x-iso-builder]
+    verbs: [use]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: team-x-use-iso-scc
+subjects:
+  - kind: ServiceAccount
+    name: image-builder
+    namespace: image-factory
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: team-x-use-iso-scc

@@ -1,0 +1,80 @@
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: windows-factory-action
+spec:
+  params:
+  - name: action
+    type: string
+  - name: toolbox-image
+    type: string
+  - name: build-id
+    type: string
+  - name: version
+    type: string
+  - name: iso-url
+    type: string
+  - name: accept-eula
+    type: string
+  - name: storage-class
+    type: string
+  - name: virtio-image
+    type: string
+  - name: dr-cluster
+    type: string
+  - name: dr-storage-class
+    type: string
+  workspaces:
+  - name: artifacts
+  results:
+  - name: image-name
+  volumes:
+  - name: scripts
+    configMap:
+      name: factory-scripts
+  - name: windows-source
+    configMap:
+      name: windows-build-source
+  steps:
+  - name: run
+    image: "$(params.toolbox-image)"
+    command:
+    - python3
+    - "/opt/factory/factory.py"
+    args:
+    - "$(params.action)"
+    env:
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    - name: BUILD_ID
+      value: "$(params.build-id)"
+    - name: IMAGE_VERSION
+      value: "$(params.version)"
+    - name: ISO_URL
+      value: "$(params.iso-url)"
+    - name: ACCEPT_EULA
+      value: "$(params.accept-eula)"
+    - name: STORAGE_CLASS
+      value: "$(params.storage-class)"
+    - name: VIRTIO_IMAGE
+      value: "$(params.virtio-image)"
+    - name: NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    - name: WORKSPACE
+      value: "$(workspaces.artifacts.path)"
+    - name: DR_CLUSTER
+      value: "$(params.dr-cluster)"
+    - name: DR_STORAGE_CLASS
+      value: "$(params.dr-storage-class)"
+    - name: RESULT_IMAGE
+      value: "$(results.image-name.path)"
+    volumeMounts:
+    - name: scripts
+      mountPath: "/opt/factory"
+    - name: windows-source
+      mountPath: "/opt/windows"

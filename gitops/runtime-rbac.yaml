@@ -1,0 +1,38 @@
+# Apply on each destination after team-x exists. Argo manages only this namespace.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: team-x-gitops
+  namespace: team-x
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: team-x-gitops
+  namespace: team-x
+rules:
+  - apiGroups: [kubevirt.io]
+    resources: [virtualmachines, virtualmachineinstances]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [cdi.kubevirt.io]
+    resources: [datavolumes, datasources]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [services, pods, events, persistentvolumeclaims]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [route.openshift.io]
+    resources: [routes]
+    verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: team-x-gitops
+  namespace: team-x
+subjects:
+  - kind: ServiceAccount
+    name: team-x-gitops
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: team-x-gitops

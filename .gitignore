@@ -1,0 +1,7 @@
+.local/
+tools/oc
+__pycache__/
+*.pyc
+*.img
+*.img.gz
+*.iso

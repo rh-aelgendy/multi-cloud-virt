@@ -1,0 +1,71 @@
+---
+apiVersion: console.openshift.io/v1
+kind: ConsoleYAMLSample
+metadata:
+  name: team-x-windows-image-build
+spec:
+  title: Team X Windows Golden Image — ARO
+  description: Supply a Windows Server 2022 English ISO, explicitly accept the license
+    and choose a fresh build ID/version. Builds and stages cluster-local boot sources
+    for ARO and ROSA.
+  targetResource:
+    apiVersion: tekton.dev/v1
+    kind: PipelineRun
+  yaml: |
+    ---
+    apiVersion: tekton.dev/v1
+    kind: PipelineRun
+    metadata:
+      generateName: team-x-image-
+      namespace: image-factory
+      annotations:
+        demo.openshift.io/execution-cluster: aro
+    spec:
+      pipelineRef:
+        name: team-x-windows-golden-image
+      taskRunTemplate:
+        serviceAccountName: image-builder
+        podTemplate:
+          nodeSelector:
+            workload: virt
+      params:
+      - name: toolbox-image
+        value: image-registry.openshift-image-registry.svc:5000/image-factory/windows-factory@sha256:e983b8c86446f0367f6932e94a11a560e670cc11ff8abf1d2dccdd8e6bc1fe68
+      - name: build-id
+        value: team-x-win-v100-build1
+      - name: version
+        value: v1.0.0
+      - name: iso-url
+        value: https://REPLACE_ISO_URL
+      - name: accept-eula
+        value: 'false'
+      - name: storage-class
+        value: anf
+      - name: virtio-image
+        value: registry.redhat.io/container-native-virtualization/virtio-win-rhel9@sha256:9914bc4eeb31de5d2e9b3307f41795253db7f2de4b413f58504faf1dacecbcb4
+      - name: dr-cluster
+        value: rosa-virt-dr
+      - name: dr-storage-class
+        value: trident-csi
+      workspaces:
+      - name: artifacts
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+            - ReadWriteMany
+            storageClassName: anf
+            resources:
+              requests:
+                storage: 1Gi
+      taskRunSpecs:
+      - pipelineTaskName: modify-windows-iso-file
+        podTemplate:
+          securityContext:
+            runAsUser: 107
+            fsGroup: 107
+          nodeSelector:
+            workload: virt
+      timeouts:
+        pipeline: 5h
+        tasks: 4h50m
+        finally: 10m

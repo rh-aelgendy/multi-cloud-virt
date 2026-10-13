@@ -1,0 +1,24 @@
+# Only permit demo image transfer through the existing ROSA managed-cluster namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: team-x-image-transfer
+  namespace: rosa-virt-dr
+rules:
+  - apiGroups: [work.open-cluster-management.io]
+    resources: [manifestworks]
+    verbs: [get, create, update, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: team-x-image-transfer
+  namespace: rosa-virt-dr
+subjects:
+  - kind: ServiceAccount
+    name: image-builder
+    namespace: image-factory
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: team-x-image-transfer

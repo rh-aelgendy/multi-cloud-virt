@@ -1,0 +1,172 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: team-x-windows-golden-image
+  annotations:
+    tekton.dev/displayName: Team X Windows Golden Image — ARO
+    demo.openshift.io/execution-cluster: aro
+spec:
+  description: 'ARO-local Windows image factory: install, validate, Sysprep and publish
+    a local boot source. ACM stages a copy on ROSA HCP for hypothetical DR. Supply
+    ISO and accept EULA in the console.'
+  params:
+  - name: toolbox-image
+    type: string
+    default: image-registry.openshift-image-registry.svc:5000/image-factory/windows-factory:demo
+  - name: build-id
+    type: string
+  - name: version
+    type: string
+    default: v1.0.0
+  - name: iso-url
+    type: string
+  - name: accept-eula
+    type: string
+    default: 'false'
+  - name: storage-class
+    type: string
+    default: anf
+  - name: virtio-image
+    type: string
+    default: registry.redhat.io/container-native-virtualization/virtio-win-rhel9@sha256:9914bc4eeb31de5d2e9b3307f41795253db7f2de4b413f58504faf1dacecbcb4
+  - name: dr-cluster
+    type: string
+    default: rosa-virt-dr
+  - name: dr-storage-class
+    type: string
+    default: trident-csi
+  workspaces:
+  - name: artifacts
+  tasks:
+  - name: prepare
+    taskRef:
+      name: windows-factory-action
+    params:
+    - name: action
+      value: prepare
+    - name: toolbox-image
+      value: "$(params.toolbox-image)"
+    - name: build-id
+      value: "$(params.build-id)"
+    - name: version
+      value: "$(params.version)"
+    - name: iso-url
+      value: "$(params.iso-url)"
+    - name: accept-eula
+      value: "$(params.accept-eula)"
+    - name: storage-class
+      value: "$(params.storage-class)"
+    - name: virtio-image
+      value: "$(params.virtio-image)"
+    - name: dr-cluster
+      value: "$(params.dr-cluster)"
+    - name: dr-storage-class
+      value: "$(params.dr-storage-class)"
+    workspaces:
+    - name: artifacts
+      workspace: artifacts
+    timeout: 50m
+  - name: modify-windows-iso-file
+    runAfter:
+    - prepare
+    taskRef:
+      name: modify-windows-iso-file
+    params:
+    - name: pvcName
+      value: "$(params.build-id)-iso"
+    timeout: 40m
+  - name: install-and-validate
+    taskRef:
+      name: windows-factory-action
+    params:
+    - name: action
+      value: install
+    - name: toolbox-image
+      value: "$(params.toolbox-image)"
+    - name: build-id
+      value: "$(params.build-id)"
+    - name: version
+      value: "$(params.version)"
+    - name: iso-url
+      value: "$(params.iso-url)"
+    - name: accept-eula
+      value: "$(params.accept-eula)"
+    - name: storage-class
+      value: "$(params.storage-class)"
+    - name: virtio-image
+      value: "$(params.virtio-image)"
+    - name: dr-cluster
+      value: "$(params.dr-cluster)"
+    - name: dr-storage-class
+      value: "$(params.dr-storage-class)"
+    workspaces:
+    - name: artifacts
+      workspace: artifacts
+    runAfter:
+    - modify-windows-iso-file
+    timeout: 1h50m
+  - name: publish-local-image
+    taskRef:
+      name: windows-factory-action
+    params:
+    - name: action
+      value: publish
+    - name: toolbox-image
+      value: "$(params.toolbox-image)"
+    - name: build-id
+      value: "$(params.build-id)"
+    - name: version
+      value: "$(params.version)"
+    - name: iso-url
+      value: "$(params.iso-url)"
+    - name: accept-eula
+      value: "$(params.accept-eula)"
+    - name: storage-class
+      value: "$(params.storage-class)"
+    - name: virtio-image
+      value: "$(params.virtio-image)"
+    - name: dr-cluster
+      value: "$(params.dr-cluster)"
+    - name: dr-storage-class
+      value: "$(params.dr-storage-class)"
+    workspaces:
+    - name: artifacts
+      workspace: artifacts
+    runAfter:
+    - install-and-validate
+  - name: stage-dr-image
+    runAfter:
+    - publish-local-image
+    timeout: 1h40m
+    taskRef:
+      name: windows-factory-action
+    params:
+    - name: action
+      value: stage-dr
+    - name: toolbox-image
+      value: "$(params.toolbox-image)"
+    - name: build-id
+      value: "$(params.build-id)"
+    - name: version
+      value: "$(params.version)"
+    - name: iso-url
+      value: "$(params.iso-url)"
+    - name: accept-eula
+      value: "$(params.accept-eula)"
+    - name: storage-class
+      value: "$(params.storage-class)"
+    - name: virtio-image
+      value: "$(params.virtio-image)"
+    - name: dr-cluster
+      value: "$(params.dr-cluster)"
+    - name: dr-storage-class
+      value: "$(params.dr-storage-class)"
+    workspaces:
+    - name: artifacts
+      workspace: artifacts
+  results:
+  - name: local-image
+    value: "$(tasks.publish-local-image.results.image-name)"
+  - name: dr-image
+    value: "$(tasks.stage-dr-image.results.image-name)"

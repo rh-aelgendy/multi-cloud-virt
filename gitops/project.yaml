@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: team-x-vms
+  namespace: openshift-gitops
+spec:
+  description: Team X Windows demo across ARO and ROSA
+  sourceRepos:
+    - https://github.com/rh-aelgendy/multi-cloud-virt.git
+  destinations:
+    - {name: acm-hub-aro, namespace: team-x}
+    - {name: rosa-virt-dr, namespace: team-x}
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - {group: kubevirt.io, kind: VirtualMachine}
+    - {group: "", kind: Service}
+    - {group: route.openshift.io, kind: Route}

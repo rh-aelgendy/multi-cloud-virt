@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: image-builder
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: image-builder
+rules:
+  - apiGroups: [""]
+    resources: [persistentvolumeclaims, configmaps, secrets, services, pods]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [cdi.kubevirt.io]
+    resources: [datavolumes, datasources]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [kubevirt.io]
+    resources: [virtualmachines, virtualmachineinstances]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [export.kubevirt.io]
+    resources: [virtualmachineexports]
+    verbs: [get, list, watch, create, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: image-builder
+subjects:
+  - kind: ServiceAccount
+    name: image-builder
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: image-builder

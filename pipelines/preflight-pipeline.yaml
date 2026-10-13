@@ -1,0 +1,67 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: team-x-platform-readiness
+  namespace: image-factory
+spec:
+  description: Read-only ARO platform checks; does not install Windows or accept a
+    license.
+  params:
+  - name: toolbox-image
+    type: string
+    default: image-registry.openshift-image-registry.svc:5000/image-factory/windows-factory:demo
+  - name: build-id
+    type: string
+    default: platform-readiness
+  - name: version
+    type: string
+    default: v1.0.0
+  - name: iso-url
+    type: string
+    default: not-used
+  - name: accept-eula
+    type: string
+    default: 'false'
+  - name: storage-class
+    type: string
+    default: anf
+  - name: virtio-image
+    type: string
+    default: registry.redhat.io/container-native-virtualization/virtio-win-rhel9@sha256:9914bc4eeb31de5d2e9b3307f41795253db7f2de4b413f58504faf1dacecbcb4
+  - name: dr-cluster
+    type: string
+    default: rosa-virt-dr
+  - name: dr-storage-class
+    type: string
+    default: trident-csi
+  workspaces:
+  - name: artifacts
+  tasks:
+  - name: validate-platform
+    taskRef:
+      name: windows-factory-action
+    params:
+    - name: action
+      value: preflight
+    - name: toolbox-image
+      value: "$(params.toolbox-image)"
+    - name: build-id
+      value: "$(params.build-id)"
+    - name: version
+      value: "$(params.version)"
+    - name: iso-url
+      value: "$(params.iso-url)"
+    - name: accept-eula
+      value: "$(params.accept-eula)"
+    - name: storage-class
+      value: "$(params.storage-class)"
+    - name: virtio-image
+      value: "$(params.virtio-image)"
+    - name: dr-cluster
+      value: "$(params.dr-cluster)"
+    - name: dr-storage-class
+      value: "$(params.dr-storage-class)"
+    workspaces:
+    - name: artifacts
+      workspace: artifacts

@@ -1,0 +1,93 @@
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: team-x-win-v100
+  labels:
+    app: team-x-windows
+    owner: team-x
+    image-version: v1.0.0
+  annotations:
+    demo.openshift.io/image-version: v1.0.0
+spec:
+  runStrategy: RerunOnFailure
+  dataVolumeTemplates:
+  - metadata:
+      name: team-x-win-v100-root
+    spec:
+      storage:
+        storageClassName: anf
+        accessModes:
+        - ReadWriteMany
+        volumeMode: Filesystem
+        resources:
+          requests:
+            storage: 80Gi
+      sourceRef:
+        kind: DataSource
+        name: team-x-windows-v1-0-0
+        namespace: image-factory
+  template:
+    metadata:
+      labels:
+        app: team-x-windows
+        owner: team-x
+        image-version: v1.0.0
+    spec:
+      domain:
+        cpu:
+          cores: 2
+        resources:
+          requests:
+            memory: 6Gi
+        machine:
+          type: q35
+        firmware:
+          bootloader:
+            efi:
+              secureBoot: false
+        features:
+          acpi: {}
+          apic: {}
+          hyperv:
+            relaxed: {}
+            vapic: {}
+            spinlocks:
+              spinlocks: 8191
+        clock:
+          utc: {}
+          timer:
+            hpet:
+              present: false
+            hyperv: {}
+        devices:
+          disks:
+          - name: root
+            bootOrder: 1
+            disk:
+              bus: virtio
+          - name: answer
+            cdrom:
+              bus: sata
+          interfaces:
+          - name: default
+            model: virtio
+            masquerade: {}
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - name: root
+        dataVolume:
+          name: team-x-win-v100-root
+      - name: answer
+        sysprep:
+          secret:
+            name: team-x-win-v100-answer
+      readinessProbe:
+        httpGet:
+          path: "/ready.json"
+          port: 80
+        initialDelaySeconds: 60
+        periodSeconds: 10
+        timeoutSeconds: 5

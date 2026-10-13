@@ -1,0 +1,30 @@
+# Apply in ARO image-factory; on ROSA change namespace to team-x-images.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: team-x-image-cloner
+  namespace: image-factory
+rules:
+  - apiGroups: [cdi.kubevirt.io]
+    resources: [datavolumes/source]
+    verbs: [create]
+  - apiGroups: [cdi.kubevirt.io]
+    resources: [datasources]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: team-x-image-cloner
+  namespace: image-factory
+subjects:
+  - kind: ServiceAccount
+    name: team-x-gitops
+    namespace: team-x
+  - kind: ServiceAccount
+    name: default
+    namespace: team-x
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: team-x-image-cloner

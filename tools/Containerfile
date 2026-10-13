@@ -1,0 +1,9 @@
+# Use an ose-cli image matching the build cluster. Pin images by digest before rehearsal.
+ARG CLI_IMAGE=registry.redhat.io/openshift4/ose-cli:latest
+FROM ${CLI_IMAGE} AS cli
+FROM registry.access.redhat.com/ubi9/ubi:9.6
+RUN dnf install -y python3 ca-certificates && dnf clean all
+COPY --from=cli /usr/bin/oc /usr/local/bin/oc
+ENV HOME=/tmp PYTHONDONTWRITEBYTECODE=1
+WORKDIR /tmp
+USER 1001

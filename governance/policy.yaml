@@ -1,0 +1,71 @@
+# Apply on the ACM hub. ACM membership and GitOps cluster registration are separate.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vm-demo-policies
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: default
+  namespace: vm-demo-policies
+spec:
+  clusterSet: default
+---
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: vm-demo
+  namespace: vm-demo-policies
+spec:
+  clusterSets: [default]
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchLabels:
+            demo: vm-islands
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: team-x-vm-standard
+  namespace: vm-demo-policies
+spec:
+  disabled: false
+  remediationAction: inform
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: team-x-vm-standard
+        spec:
+          remediationAction: inform
+          severity: low
+          namespaceSelector:
+            include: [team-x]
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: kubevirt.io/v1
+                kind: VirtualMachine
+                metadata:
+                  name: team-x-win-v100
+                  namespace: team-x
+                  labels:
+                    owner: team-x
+                    image-version: v1.0.0
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: team-x-vm-standard
+  namespace: vm-demo-policies
+placementRef:
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+  name: vm-demo
+subjects:
+  - apiGroup: policy.open-cluster-management.io
+    kind: Policy
+    name: team-x-vm-standard

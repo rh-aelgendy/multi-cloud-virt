@@ -1,0 +1,56 @@
+---
+apiVersion: tekton.dev/v1
+kind: TaskRun
+metadata:
+  generateName: iso-tools-readiness-
+  namespace: image-factory
+spec:
+  serviceAccountName: image-builder
+  podTemplate:
+    nodeSelector:
+      workload: virt
+    securityContext:
+      runAsUser: 107
+      fsGroup: 107
+  timeout: 15m
+  taskSpec:
+    steps:
+    - name: guestfish-kvm
+      image: registry.redhat.io/container-native-virtualization/kubevirt-tekton-tasks-disk-virt-customize-rhel9:v4.21.0
+      securityContext:
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        seccompProfile:
+          type: RuntimeDefault
+      computeResources:
+        requests:
+          devices.kubevirt.io/kvm: '1'
+        limits:
+          devices.kubevirt.io/kvm: '1'
+      script: |
+        #!/bin/bash
+        set -euo pipefail
+        id
+        test "$(id -u)" = 107
+        test -r /dev/kvm
+        test -w /dev/kvm
+        guestfish --version
+        qemu-img --version
+        echo 'Vendor image and KVM access validated; no Windows ISO used.'
+    - name: xorriso
+      image: registry.redhat.io/container-native-virtualization/kubevirt-tekton-tasks-create-datavolume-rhel9:v4.21.0
+      securityContext:
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        seccompProfile:
+          type: RuntimeDefault
+      script: |
+        #!/bin/bash
+        set -euo pipefail
+        xorriso --version

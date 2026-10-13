@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- "../../base"
+labels:
+- pairs:
+    cloud: aws
+  includeTemplates: true
+patches:
+- target:
+    kind: VirtualMachine
+    name: team-x-win-v100
+  patch: '[{"op": "replace", "path": "/spec/dataVolumeTemplates/0/spec/storage/storageClassName",
+    "value": "trident-csi"}, {"op": "replace", "path": "/spec/dataVolumeTemplates/0/spec/sourceRef/namespace",
+    "value": "team-x-images"}, {"op": "add", "path": "/spec/template/spec/nodeSelector",
+    "value": {"node.kubernetes.io/instance-type": "m5zn.metal"}}]'
