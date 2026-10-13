@@ -32,7 +32,7 @@ ARO's built-in `win11` catalog entry initially had no PVC. `windows11-base-image
 
 1. Open ARO Console → Pipelines, project **image-factory**.
 2. Use the **Windows 11 base image — ARO** PipelineRun YAML sample, or import `base-run.example.yaml`.
-3. Supply the Windows 11 ISO HTTPS URL, edition, fresh build/output names, and explicitly set `accept-eula: 'true'` only after accepting the applicable terms.
+3. For new media, supply the Windows 11 ISO HTTPS URL and edition. The installed Console sample instead reuses the lab's prepared `win11-base-build1-iso` media with fresh build/output names (`win11-base-build5` / `win11-base-v1-1-0`). Explicitly set `accept-eula: 'true'` only after accepting the applicable terms.
 4. Retain the `image-builder` service account, `workload=virt` task placement and the UID/GID 107 override for the ISO modification task.
 
 The ISO is imported into a persistent DataVolume. Later base builds can reuse it by setting `iso-dv-name` to that existing name and leaving `iso-url` empty. If the earlier ISO modification task succeeded, also set `iso-already-prepared: 'true'`: the vendor modification is a one-time operation and cannot process its own output again. Supplying a different URL with an existing media name fails rather than replacing the media. The current setup imported `win11-base-build1-iso`; the signed download link stays outside Git. The media/PVCs have no scheduled cleanup.

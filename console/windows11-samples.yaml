@@ -28,23 +28,23 @@ spec:
             workload: virt
       params:
       - name: build-id
-        value: win11-base-build1
+        value: win11-base-build5
       - name: image-name
-        value: win11-base-v1-0-0
+        value: win11-base-v1-1-0
       - name: image-version
-        value: v1.0.0
+        value: v1.1.0
       - name: source-image
         value: win11-base-v1-0-0
       - name: iso-dv-name
-        value: win11-pro-install-media
+        value: win11-base-build1-iso
       - name: iso-already-prepared
-        value: 'false'
+        value: 'true'
       - name: windows-edition
         value: Windows 11 Pro
       - name: accept-eula
         value: 'false'
       - name: iso-url
-        value: REPLACE_WITH_WINDOWS11_ISO_HTTPS_URL
+        value: ''
       timeouts:
         pipeline: 4h
       taskRunSpecs:
