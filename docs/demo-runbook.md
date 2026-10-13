@@ -9,7 +9,7 @@ All build execution is on ARO. Present from ARO's Console, GitOps and ACM UIs. H
 | 5–7 | Show guest validation, local ARO boot source and ACM-staged ROSA boot source | “The image is built once and available locally at both destinations.” |
 | 7–10 | Show the common VM base and cloud overlays in GitOps; open both IIS pages | “Same image version and team experience; different storage and VM identities.” |
 | 10–12 | Remove the Linux VM ownership label and observe GitOps self-healing | “The same desired-state workflow corrects drift across clouds.” |
-| 12–14 | Inspect/restart through ACM's fleet virtualization view | “Provisioning and day-two operations share an operating model.” |
+| 12–14 | Enforce `demo-01-project-ownership` and/or `demo-02-vm-capacity` in ACM Governance; show both cluster results | “One policy action applies the same standard across clouds.” |
 | 14–15 | Return to the healthy fleet and application pages | “Build once. Stage locally. Provision consistently. Manage centrally.” |
 
 Rehearse these points:
@@ -27,3 +27,5 @@ Rehearse these points:
 Keep a clearly labeled recording of a real successful run as a connectivity fallback. Never describe a prepared run as the new live run. If the live build is still running at the end, leave it visible as ongoing work.
 
 The setup history has a successful build/image-copy run whose final feedback wait was cancelled after an ACM parser correction, followed by successful completion run `team-x-image-complete-mrm82`. Show the successful installation/validation tasks and the separate completion result accurately. A future fresh run uses the corrected parser; this setup history is not a single entirely green PipelineRun.
+
+[Compliance presenter steps, expected results and reset](../governance/compliance-demo/README.md). The third policy connects governance back to the Windows golden-image catalog.

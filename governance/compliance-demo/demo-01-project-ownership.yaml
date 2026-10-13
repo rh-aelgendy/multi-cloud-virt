@@ -1,0 +1,67 @@
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: demo-01-project-ownership
+  namespace: vm-demo-policies
+  labels:
+    demo: vm-islands
+    demo.openshift.io/scenario: one-click-compliance
+  annotations:
+    policy.open-cluster-management.io/description: Adds the same Team X ownership
+      and cost-center labels to linux-vms-prod and windows-vms-vdi. Does not change
+      VM definitions.
+    demo.openshift.io/title: Project ownership on both clouds
+spec:
+  disabled: false
+  remediationAction: inform
+  policy-templates:
+  - objectDefinition:
+      apiVersion: policy.open-cluster-management.io/v1
+      kind: ConfigurationPolicy
+      metadata:
+        name: demo-01-project-ownership
+      spec:
+        remediationAction: inform
+        severity: low
+        pruneObjectBehavior: None
+        evaluationInterval:
+          compliant: 30s
+          noncompliant: 10s
+        namespaceSelector:
+          include:
+          - linux-vms-prod
+          - windows-vms-vdi
+        object-templates:
+        - complianceType: musthave
+          objectDefinition:
+            apiVersion: v1
+            kind: Namespace
+            metadata:
+              name: linux-vms-prod
+              labels:
+                demo.openshift.io/owner: team-x
+                demo.openshift.io/cost-center: virt-demo
+        - complianceType: musthave
+          objectDefinition:
+            apiVersion: v1
+            kind: Namespace
+            metadata:
+              name: windows-vms-vdi
+              labels:
+                demo.openshift.io/owner: team-x
+                demo.openshift.io/cost-center: virt-demo
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: demo-01-project-ownership
+  namespace: vm-demo-policies
+placementRef:
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+  name: vm-demo
+subjects:
+- apiGroup: policy.open-cluster-management.io
+  kind: Policy
+  name: demo-01-project-ownership

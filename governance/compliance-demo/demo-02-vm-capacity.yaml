@@ -1,0 +1,69 @@
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: demo-02-vm-capacity
+  namespace: vm-demo-policies
+  labels:
+    demo: vm-islands
+    demo.openshift.io/scenario: one-click-compliance
+  annotations:
+    policy.open-cluster-management.io/description: Creates a namespace ResourceQuota
+      allowing at most two VirtualMachine objects per project. Admission rejects a
+      third VM; existing VMs are never deleted to satisfy quota.
+    demo.openshift.io/title: Two VMs per project
+spec:
+  disabled: false
+  remediationAction: inform
+  policy-templates:
+  - objectDefinition:
+      apiVersion: policy.open-cluster-management.io/v1
+      kind: ConfigurationPolicy
+      metadata:
+        name: demo-02-vm-capacity
+      spec:
+        remediationAction: inform
+        severity: low
+        pruneObjectBehavior: None
+        evaluationInterval:
+          compliant: 30s
+          noncompliant: 10s
+        namespaceSelector:
+          include:
+          - linux-vms-prod
+          - windows-vms-vdi
+        object-templates:
+        - complianceType: musthave
+          objectDefinition:
+            apiVersion: v1
+            kind: ResourceQuota
+            metadata:
+              name: demo-vm-capacity
+              namespace: linux-vms-prod
+            spec:
+              hard:
+                count/virtualmachines.kubevirt.io: '2'
+        - complianceType: musthave
+          objectDefinition:
+            apiVersion: v1
+            kind: ResourceQuota
+            metadata:
+              name: demo-vm-capacity
+              namespace: windows-vms-vdi
+            spec:
+              hard:
+                count/virtualmachines.kubevirt.io: '2'
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: demo-02-vm-capacity
+  namespace: vm-demo-policies
+placementRef:
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+  name: vm-demo
+subjects:
+- apiGroup: policy.open-cluster-management.io
+  kind: Policy
+  name: demo-02-vm-capacity

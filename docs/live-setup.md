@@ -38,3 +38,9 @@ Integration corrections are retained in source: ROSA's importer limit was raised
 The reusable UI sample still defaults to `accept-eula: false`. Fresh builds require a new build ID and image version. The Windows applications use manual sync; the Linux applications provide the verified automated self-healing demonstration.
 
 ROSA is a hypothetical DR destination: image availability and consistent VM provisioning are demonstrated, not application-data replication or automatic failover.
+
+## ACM one-action compliance scenarios
+
+Three additional policies in `vm-demo-policies` were installed, rehearsed and reset: `demo-01-project-ownership`, `demo-02-vm-capacity` and `demo-03-golden-image-catalog`. Each reached Compliant on both clusters in Enforce mode, then returned to Inform/NonCompliant on both clusters. Project/catalog label changes and quota specifications were checked directly. Both clusters admitted two halted diskless VM definitions and rejected a third through the VM object-count quota; all probes were removed. Existing four GitOps applications remained Synced/Healthy.
+
+The empty `linux-vms-prod` and `windows-vms-vdi` projects now exist on both destinations for these scenarios and future standalone examples. No example workload was deployed into them. See [the compliance presenter guide](../governance/compliance-demo/README.md) for UI steps, expected results and reset commands.

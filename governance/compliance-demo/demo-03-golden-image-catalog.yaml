@@ -1,0 +1,59 @@
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: demo-03-golden-image-catalog
+  namespace: vm-demo-policies
+  labels:
+    demo: vm-islands
+    demo.openshift.io/scenario: one-click-compliance
+  annotations:
+    policy.open-cluster-management.io/description: Labels the existing v1.0.0 Windows
+      DataSource with Team X catalog ownership and golden lifecycle. This checks catalog
+      metadata only, not guest patching or vulnerability compliance.
+    demo.openshift.io/title: Consistent golden-image catalog metadata
+spec:
+  disabled: false
+  remediationAction: inform
+  policy-templates:
+  - objectDefinition:
+      apiVersion: policy.open-cluster-management.io/v1
+      kind: ConfigurationPolicy
+      metadata:
+        name: demo-03-golden-image-catalog
+      spec:
+        remediationAction: inform
+        severity: low
+        pruneObjectBehavior: None
+        evaluationInterval:
+          compliant: 30s
+          noncompliant: 10s
+        namespaceSelector:
+          include:
+          - image-factory
+          - team-x-images
+        object-templates:
+        - complianceType: musthave
+          objectDefinition:
+            apiVersion: cdi.kubevirt.io/v1beta1
+            kind: DataSource
+            metadata:
+              name: team-x-windows-v1-0-0
+              labels:
+                demo.openshift.io/catalog-owner: team-x
+                demo.openshift.io/lifecycle: golden
+                image-version: v1.0.0
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: demo-03-golden-image-catalog
+  namespace: vm-demo-policies
+placementRef:
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+  name: vm-demo
+subjects:
+- apiGroup: policy.open-cluster-management.io
+  kind: Policy
+  name: demo-03-golden-image-catalog
