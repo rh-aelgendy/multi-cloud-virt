@@ -1,0 +1,46 @@
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: team-x-existing-volume-standard
+  namespace: vm-demo-policies
+spec:
+  disabled: false
+  remediationAction: inform
+  policy-templates:
+  - objectDefinition:
+      apiVersion: policy.open-cluster-management.io/v1
+      kind: ConfigurationPolicy
+      metadata:
+        name: team-x-existing-volume-standard
+      spec:
+        remediationAction: inform
+        severity: low
+        namespaceSelector:
+          include:
+          - team-x
+        object-templates:
+        - complianceType: musthave
+          objectDefinition:
+            apiVersion: kubevirt.io/v1
+            kind: VirtualMachine
+            metadata:
+              name: team-x-linux
+              namespace: team-x
+              labels:
+                owner: team-x
+                app: team-x-linux
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: team-x-existing-volume-standard
+  namespace: vm-demo-policies
+placementRef:
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+  name: vm-demo
+subjects:
+- apiGroup: policy.open-cluster-management.io
+  kind: Policy
+  name: team-x-existing-volume-standard

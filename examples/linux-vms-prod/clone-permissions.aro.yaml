@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: linux-prod-image-cloner
+  namespace: openshift-virtualization-os-images
+rules:
+- apiGroups:
+  - cdi.kubevirt.io
+  resources:
+  - datavolumes/source
+  verbs:
+  - create
+- apiGroups:
+  - cdi.kubevirt.io
+  resources:
+  - datasources
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: linux-prod-image-cloner
+  namespace: openshift-virtualization-os-images
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: linux-vms-prod
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: linux-prod-image-cloner

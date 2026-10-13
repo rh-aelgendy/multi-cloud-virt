@@ -100,3 +100,10 @@ spec:
         initialDelaySeconds: 30
         periodSeconds: 10
         timeoutSeconds: 5
+      accessCredentials:
+      - userPassword:
+          source:
+            secret:
+              secretName: linux-vm-login
+          propagationMethod:
+            qemuGuestAgent: {}

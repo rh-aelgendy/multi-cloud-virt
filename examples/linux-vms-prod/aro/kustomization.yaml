@@ -1,0 +1,24 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: linux-vms-prod
+resources:
+- "../../../vm/linux/overlays/aro"
+- "../common"
+patches:
+- target:
+    kind: VirtualMachine
+    name: team-x-linux
+  patch: '[{"op": "replace", "path": "/metadata/name", "value": "linux-web-01"}, {"op":
+    "replace", "path": "/spec/dataVolumeTemplates/0/metadata/name", "value": "linux-web-01-root"},
+    {"op": "replace", "path": "/spec/template/spec/volumes/0/dataVolume/name", "value":
+    "linux-web-01-root"}]'
+- target:
+    kind: Service
+    name: team-x-linux
+  patch: '[{"op": "replace", "path": "/metadata/name", "value": "linux-web"}]'
+- target:
+    kind: Route
+    name: team-x-linux
+  patch: '[{"op": "replace", "path": "/metadata/name", "value": "linux-web"}, {"op":
+    "replace", "path": "/spec/to/name", "value": "linux-web"}]'

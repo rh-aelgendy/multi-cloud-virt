@@ -1,0 +1,25 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: windows-vms-vdi
+resources:
+- "../../../vm/overlays/aro"
+- "../common"
+patches:
+- target:
+    kind: VirtualMachine
+    name: team-x-win-v100
+  patch: '[{"op": "replace", "path": "/metadata/name", "value": "win-vdi-01"}, {"op":
+    "replace", "path": "/spec/dataVolumeTemplates/0/metadata/name", "value": "win-vdi-01-root"},
+    {"op": "replace", "path": "/spec/template/spec/volumes/0/dataVolume/name", "value":
+    "win-vdi-01-root"}, {"op": "replace", "path": "/spec/template/spec/volumes/1/sysprep/secret/name",
+    "value": "win-vdi-01-answer"}]'
+- target:
+    kind: Service
+    name: team-x-windows
+  patch: '[{"op": "replace", "path": "/metadata/name", "value": "windows-vdi-web"}]'
+- target:
+    kind: Route
+    name: team-x-windows
+  patch: '[{"op": "replace", "path": "/metadata/name", "value": "windows-vdi-web"},
+    {"op": "replace", "path": "/spec/to/name", "value": "windows-vdi-web"}]'

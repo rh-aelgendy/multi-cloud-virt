@@ -1,0 +1,152 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    demo: vm-islands
+    owner: team-x
+  name: linux-vms-prod
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    cloud: aws
+  name: linux-web
+  namespace: linux-vms-prod
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: team-x-linux
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    app: team-x-linux
+    cloud: aws
+    demo: vm-islands
+    owner: team-x
+  name: linux-web-01
+  namespace: linux-vms-prod
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: linux-web-01-root
+    spec:
+      sourceRef:
+        kind: DataSource
+        name: fedora
+        namespace: openshift-virtualization-os-images
+      storage:
+        accessModes:
+        - ReadWriteMany
+        resources:
+          requests:
+            storage: 50Gi
+        storageClassName: trident-csi
+        volumeMode: Filesystem
+  runStrategy: RerunOnFailure
+  template:
+    metadata:
+      labels:
+        app: team-x-linux
+        owner: team-x
+    spec:
+      accessCredentials:
+      - userPassword:
+          propagationMethod:
+            qemuGuestAgent: {}
+          source:
+            secret:
+              secretName: linux-vm-login
+      domain:
+        cpu:
+          cores: 2
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: root
+          - disk:
+              bus: virtio
+            name: cloudinit
+          interfaces:
+          - masquerade: {}
+            model: virtio
+            name: default
+        resources:
+          requests:
+            memory: 2Gi
+      hostname: teamx-aws
+      networks:
+      - name: default
+        pod: {}
+      nodeSelector:
+        node.kubernetes.io/instance-type: m5zn.metal
+      readinessProbe:
+        httpGet:
+          path: /ready.json
+          port: 8080
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        timeoutSeconds: 5
+      volumes:
+      - dataVolume:
+          name: linux-web-01-root
+        name: root
+      - cloudInitNoCloud:
+          userData: |
+            #cloud-config
+            write_files:
+              - path: /opt/team-x/app.py
+                permissions: '0644'
+                content: |
+                  import http.server, json, socket
+                  host = socket.gethostname()
+                  cloud = 'Azure / ARO' if 'azure' in host else 'AWS / ROSA HCP'
+                  class App(http.server.BaseHTTPRequestHandler):
+                      def do_GET(self):
+                          self.send_response(200)
+                          self.send_header('Content-Type', 'application/json' if self.path == '/ready.json' else 'text/html; charset=utf-8')
+                          self.end_headers()
+                          if self.path == '/ready.json':
+                              body = json.dumps({'team':'team-x', 'cloud':cloud, 'hostname':host, 'bootSource':'existing Fedora DataSource'})
+                          else:
+                              body = '<html><head><title>Team X VM</title><style>body{background:#101820;color:white;font:24px sans-serif;padding:70px}h1{color:#73d8ff}</style></head><body><h1>Team X | One Operating Model</h1><p>Cloud: '+cloud+'</p><p>Hostname: '+host+'</p><p>Boot source: existing Fedora bootable volume</p><p>Provisioned declaratively by ARO GitOps</p></body></html>'
+                          self.wfile.write(body.encode())
+                  http.server.HTTPServer(('0.0.0.0',8080),App).serve_forever()
+              - path: /etc/systemd/system/team-x-demo.service
+                content: |
+                  [Unit]
+                  Description=Team X VM demo
+                  After=network-online.target
+                  Wants=network-online.target
+                  [Service]
+                  ExecStart=/usr/bin/python3 /opt/team-x/app.py
+                  Restart=always
+                  [Install]
+                  WantedBy=multi-user.target
+            runcmd:
+              - [systemctl, daemon-reload]
+              - [systemctl, enable, --now, team-x-demo.service]
+        name: cloudinit
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    cloud: aws
+  name: linux-web
+  namespace: linux-vms-prod
+spec:
+  port:
+    targetPort: http
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: linux-web

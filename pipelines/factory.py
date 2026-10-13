@@ -150,6 +150,14 @@ def image_name():
     return 'team-x-windows-' + version.replace('.', '-')
 
 
+def windows_source_labels():
+    return {'demo': 'vm-islands', 'image-version': version,
+            'instancetype.kubevirt.io/default-instancetype': 'u1.large',
+            'instancetype.kubevirt.io/default-instancetype-kind': 'VirtualMachineClusterInstancetype',
+            'instancetype.kubevirt.io/default-preference': 'windows.2k22.virtio',
+            'instancetype.kubevirt.io/default-preference-kind': 'VirtualMachineClusterPreference'}
+
+
 def preflight():
     import xml.etree.ElementTree as ET
     ET.parse('/opt/windows/autounattend.xml')
@@ -176,8 +184,10 @@ def publish():
     vm = get('vm', build_id)
     if not vm or vm['spec'].get('runStrategy') != 'Halted':
         raise RuntimeError('Builder must be sealed and halted')
+    image_metadata = metadata(image_name())
+    image_metadata['labels'].update(windows_source_labels())
     create({'apiVersion': 'cdi.kubevirt.io/v1beta1', 'kind': 'DataSource',
-            'metadata': metadata(image_name()), 'spec': {'source': {'pvc': {
+            'metadata': image_metadata, 'spec': {'source': {'pvc': {
                 'name': build_id + '-root', 'namespace': os.environ['NAMESPACE']}}}})
     create({'apiVersion': 'v1', 'kind': 'ConfigMap', 'metadata': metadata(image_name() + '-evidence'),
             'data': {'validation.json': json.dumps(evidence, indent=2)}})
@@ -209,7 +219,6 @@ def stage_dr():
     source_namespace = 'team-x-images'
     name = image_name()
     manifests = [
-        {'apiVersion': 'v1', 'kind': 'Namespace', 'metadata': {'name': source_namespace}},
         {'apiVersion': 'v1', 'kind': 'Secret', 'metadata': {'name': name + '-transfer', 'namespace': source_namespace},
          'stringData': {'header': 'x-kubevirt-export-token: ' + token}},
         {'apiVersion': 'v1', 'kind': 'ConfigMap', 'metadata': {'name': name + '-ca', 'namespace': source_namespace},
@@ -222,7 +231,7 @@ def stage_dr():
                               'volumeMode': 'Filesystem', 'accessModes': ['ReadWriteMany'],
                               'resources': {'requests': {'storage': '80Gi'}}}}},
         {'apiVersion': 'cdi.kubevirt.io/v1beta1', 'kind': 'DataSource',
-         'metadata': {'name': name, 'namespace': source_namespace, 'labels': {'demo': 'vm-islands', 'image-version': version}},
+         'metadata': {'name': name, 'namespace': source_namespace, 'labels': windows_source_labels()},
          'spec': {'source': {'pvc': {'name': name, 'namespace': source_namespace}}}},
     ]
     work_name = name + '-image'

@@ -28,7 +28,7 @@
         </ModifyPartitions>
       </Disk></DiskConfiguration>
       <ImageInstall><OSImage>
-        <InstallFrom><MetaData wcm:action="add"><Key>/IMAGE/DESCRIPTION</Key><Value>Windows Server 2022 SERVERDATACENTER</Value></MetaData></InstallFrom>
+        <InstallFrom><MetaData wcm:action="add"><Key>/IMAGE/NAME</Key><Value>Windows Server 2022 SERVERDATACENTER</Value></MetaData></InstallFrom>
         <InstallTo><DiskID>0</DiskID><PartitionID>3</PartitionID></InstallTo>
       </OSImage></ImageInstall>
     </component>

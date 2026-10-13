@@ -4,7 +4,6 @@ import argparse
 import base64
 import getpass
 import json
-from pathlib import Path
 import re
 import subprocess
 from xml.sax.saxutils import escape
@@ -49,6 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--hostname', required=True)
     parser.add_argument('--version', default='v1.0.0')
     parser.add_argument('--secret-name', default='team-x-win-v100-answer')
+    parser.add_argument('--namespace', default='team-x')
     args = parser.parse_args()
     if not re.fullmatch(r'[A-Za-z][A-Za-z0-9-]{0,14}', args.hostname):
         parser.error('hostname must start with a letter and contain at most 15 letters, digits or hyphens')
@@ -58,11 +58,11 @@ if __name__ == '__main__':
     if len(password) < 14 or not all((re.search(r'[A-Z]', password), re.search(r'[a-z]', password),
                                     re.search(r'[0-9]', password), re.search(r'[^A-Za-z0-9]', password))):
         parser.error('use at least 14 characters including uppercase, lowercase, digit and symbol')
-    ns = Path(__file__).resolve().parents[1] / 'vm/base/namespace.yaml'
-    subprocess.run(['oc', '--context', args.context, 'apply', '-f', str(ns)], check=True)
+    ns = {'apiVersion': 'v1', 'kind': 'Namespace', 'metadata': {'name': args.namespace}}
+    subprocess.run(['oc', '--context', args.context, 'apply', '-f', '-'], input=json.dumps(ns), text=True, check=True)
     secret = {'apiVersion': 'v1', 'kind': 'Secret', 'metadata': {
-        'name': args.secret_name, 'namespace': 'team-x'}, 'type': 'Opaque',
+        'name': args.secret_name, 'namespace': args.namespace}, 'type': 'Opaque',
         'stringData': {'unattend.xml': answer(args.hostname, args.cloud, password, args.version)}}
     subprocess.run(['oc', '--context', args.context, 'apply', '-f', '-'],
                    input=json.dumps(secret), text=True, check=True, capture_output=True)
-    print(f'Created/updated {args.secret_name} in team-x on {args.context}; no credentials written locally.')
+    print(f'Created/updated {args.secret_name} in {args.namespace} on {args.context}; no credentials written locally.')

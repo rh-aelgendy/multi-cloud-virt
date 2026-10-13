@@ -5,9 +5,8 @@ metadata:
   name: team-x-windows-image-build
 spec:
   title: Team X Windows Golden Image — ARO
-  description: Supply a Windows Server 2022 English ISO, explicitly accept the license
-    and choose a fresh build ID/version. Builds and stages cluster-local boot sources
-    for ARO and ROSA.
+  description: Windows Server 2022 image factory on ARO. Explicitly accept the license
+    and choose a fresh build ID/version before starting.
   targetResource:
     apiVersion: tekton.dev/v1
     kind: PipelineRun
@@ -36,7 +35,7 @@ spec:
       - name: version
         value: v1.0.0
       - name: iso-url
-        value: https://REPLACE_ISO_URL
+        value: https://go.microsoft.com/fwlink/p/?LinkID=2195280&clcid=0x409&culture=en-us&country=US
       - name: accept-eula
         value: 'false'
       - name: storage-class

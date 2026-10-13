@@ -1,0 +1,137 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    demo: vm-islands
+    owner: team-x
+  name: windows-vms-vdi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    cloud: azure
+  name: windows-vdi-web
+  namespace: windows-vms-vdi
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    app: team-x-windows
+    image-version: v1.0.0
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  annotations:
+    demo.openshift.io/image-version: v1.0.0
+  labels:
+    app: team-x-windows
+    cloud: azure
+    image-version: v1.0.0
+    owner: team-x
+  name: win-vdi-01
+  namespace: windows-vms-vdi
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: win-vdi-01-root
+    spec:
+      sourceRef:
+        kind: DataSource
+        name: team-x-windows-v1-0-0
+        namespace: image-factory
+      storage:
+        accessModes:
+        - ReadWriteMany
+        resources:
+          requests:
+            storage: 80Gi
+        storageClassName: anf
+        volumeMode: Filesystem
+  runStrategy: RerunOnFailure
+  template:
+    metadata:
+      labels:
+        app: team-x-windows
+        image-version: v1.0.0
+        owner: team-x
+    spec:
+      domain:
+        clock:
+          timer:
+            hpet:
+              present: false
+            hyperv: {}
+          utc: {}
+        cpu:
+          cores: 2
+        devices:
+          disks:
+          - bootOrder: 1
+            disk:
+              bus: virtio
+            name: root
+          - cdrom:
+              bus: sata
+            name: answer
+          interfaces:
+          - masquerade: {}
+            model: virtio
+            name: default
+        features:
+          acpi: {}
+          apic: {}
+          hyperv:
+            relaxed: {}
+            spinlocks:
+              spinlocks: 8191
+            vapic: {}
+        firmware:
+          bootloader:
+            efi:
+              secureBoot: false
+        machine:
+          type: q35
+        resources:
+          requests:
+            memory: 6Gi
+      networks:
+      - name: default
+        pod: {}
+      nodeSelector:
+        workload: virt
+      readinessProbe:
+        httpGet:
+          path: /ready.json
+          port: 80
+        initialDelaySeconds: 60
+        periodSeconds: 10
+        timeoutSeconds: 5
+      volumes:
+      - dataVolume:
+          name: win-vdi-01-root
+        name: root
+      - name: answer
+        sysprep:
+          secret:
+            name: win-vdi-01-answer
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    cloud: azure
+  name: windows-vdi-web
+  namespace: windows-vms-vdi
+spec:
+  port:
+    targetPort: http
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: windows-vdi-web

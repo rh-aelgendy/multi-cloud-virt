@@ -15,9 +15,17 @@
 - Installed ACM inform-only ownership/version policy and confirmed placement selects exactly the two demo clusters.
 - Local YAML/Kustomize, wiring/placement and nine controller/answer-file checks passed.
 
-## Pending Windows input
+## Declarative VMs from existing bootable volumes
 
-The user will supply the Windows ISO and accept the license in the ARO UI. No Windows image has been built, no Windows guest test has passed, and no Windows runtime VM is running yet. The ready PipelineRun sample defaults to `accept-eula: false`.
+Both `team-x-linux` VMs are running from their clusters’ existing Fedora DataSources. ARO placement is `workload=virt`; ROSA placement is the metal worker. Both GitOps applications are Synced/Healthy, guest agents connected, and HTTPS `/ready.json` returns HTTP 200 with distinct cloud/hostname values. A harmless ownership-label drift on ROSA was automatically repaired to `owner=team-x`.
+
+The GitOps instance uses strict RBAC handling and a resource-type inclusion list scoped to the two demo clusters. Its cache issue was resolved without granting the destination accounts cluster-admin.
+
+The earlier disposable transfer probe was cancelled and its image/export resources removed.
+
+## Windows build in progress
+
+The user supplied the Microsoft Windows Server 2022 ISO URL and explicitly accepted its evaluation terms. PipelineRun `team-x-image-xnrwn` is running. ISO import and media preparation succeeded. Windows Server 2022 Datacenter Evaluation is installed with its guest agent connected; the pipeline captured successful VirtIO, guest-agent, IIS and HTTP validation. Generalization, image staging and runtime first boot are still being completed. The reusable UI sample still defaults to `accept-eula: false` for future runs.
 
 GitOps applications initially use manual sync. After the image pipeline publishes the ARO source and stages the ROSA source, Sync both applications and validate first boot, QEMU agent, IIS version/cloud identity and restart readiness. Enable self-healing after that rehearsal.
 

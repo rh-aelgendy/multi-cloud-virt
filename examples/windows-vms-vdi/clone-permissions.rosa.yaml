@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: windows-vdi-image-cloner
+  namespace: team-x-images
+rules:
+- apiGroups:
+  - cdi.kubevirt.io
+  resources:
+  - datavolumes/source
+  verbs:
+  - create
+- apiGroups:
+  - cdi.kubevirt.io
+  resources:
+  - datasources
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: windows-vdi-image-cloner
+  namespace: team-x-images
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: windows-vms-vdi
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: windows-vdi-image-cloner

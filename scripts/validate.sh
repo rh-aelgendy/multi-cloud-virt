@@ -6,11 +6,13 @@ trap 'rm -rf "$validation_tmp"' EXIT
 oc kustomize pipelines > "$validation_tmp/pipelines.yaml"
 oc kustomize vm/overlays/aro > "$validation_tmp/aro.yaml"
 oc kustomize vm/overlays/rosa > "$validation_tmp/rosa.yaml"
+oc kustomize vm/linux/overlays/aro > "$validation_tmp/linux-aro.yaml"
+oc kustomize vm/linux/overlays/rosa > "$validation_tmp/linux-rosa.yaml"
 ruby -ryaml -e '
-  files = Dir.glob("{windows,pipelines,vm,gitops,governance,tools,console}/**/*.yaml") + Dir.glob(ARGV[0] + "/*.yaml")
+  files = Dir.glob("{windows,pipelines,vm,gitops,governance,tools,console,examples}/**/*.yaml") + Dir.glob(ARGV[0] + "/*.yaml")
   files.each { |file| YAML.load_stream(File.read(file)) }
   puts "Parsed #{files.length} YAML sources/rendered bundles"
-  ["aro", "rosa"].each do |cloud|
+  ["aro", "rosa", "linux-aro", "linux-rosa"].each do |cloud|
     docs = YAML.load_stream(File.read("#{ARGV[0]}/#{cloud}.yaml"))
     vm = docs.find { |d| d["kind"] == "VirtualMachine" }
     service = docs.find { |d| d["kind"] == "Service" }
@@ -21,14 +23,24 @@ ruby -ryaml -e '
     disk = vm.dig("spec", "dataVolumeTemplates", 0, "metadata", "name")
     raise "Disk reference mismatch" unless template.dig("spec", "volumes", 0, "dataVolume", "name") == disk
     placement = template.dig("spec", "nodeSelector")
-    if cloud == "aro"
+    if cloud.end_with?("aro")
       raise "ARO VM placement missing" unless placement == {"workload" => "virt"}
     else
       raise "ROSA metal placement missing" unless placement["node.kubernetes.io/instance-type"] == "m5zn.metal"
     end
     raise "External image source still configured" unless vm.dig("spec", "dataVolumeTemplates", 0, "spec", "sourceRef", "kind") == "DataSource"
-    expected = cloud == "aro" ? "azure" : "aws"
+    expected = cloud.end_with?("aro") ? "azure" : "aws"
     raise "Cloud label mismatch" unless vm.dig("metadata", "labels", "cloud") == expected
+  end
+  Dir.glob("examples/rendered/*.yaml").each do |file|
+    docs = YAML.load_stream(File.read(file))
+    vm = docs.find { |d| d["kind"] == "VirtualMachine" }
+    service = docs.find { |d| d["kind"] == "Service" }
+    route = docs.find { |d| d["kind"] == "Route" }
+    expected_ns = file.include?("linux-vms-prod") ? "linux-vms-prod" : "windows-vms-vdi"
+    raise "Example namespace mismatch" unless docs.all? { |d| d["kind"] == "Namespace" || d.dig("metadata", "namespace") == expected_ns }
+    raise "Example Route mismatch" unless route.dig("spec", "to", "name") == service.dig("metadata", "name")
+    raise "Example disk mismatch" unless vm.dig("spec", "template", "spec", "volumes", 0, "dataVolume", "name") == vm.dig("spec", "dataVolumeTemplates", 0, "metadata", "name")
   end
   docs = YAML.load_stream(File.read("#{ARGV[0]}/pipelines.yaml"))
   pipeline = docs.find { |d| d["kind"] == "Pipeline" }

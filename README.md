@@ -31,13 +31,20 @@ flowchart LR
 - GitOps destinations use dedicated `team-x` service accounts and TLS verification. Credentials remain valid until revoked, rather than expiring after a day.
 - Unique Windows Administrator passwords exist only in the per-cluster runtime Secrets, outside Git.
 
-**The Windows installation is deliberately pending.** Supply your Windows Server 2022 English x64 ISO and explicitly accept its terms in the ARO UI. The setup/readiness checks do not prove a Windows image has been built. GitOps applications are initially manual-sync so missing image sources cannot accidentally start a deployment.
+**The Windows image pipeline is running with the user-supplied ISO and explicit license acceptance.** Its completion and first-boot validation will be recorded in the live setup record. The Windows applications remain manual-sync until their golden sources exist. Two additional Fedora VMs are already deployed from the clusters’ existing bootable volumes, and their applications are Synced/Healthy with HTTPS readiness verified.
+
+## Console login and reusable projects
+
+The existing Fedora VMs use `fedora`; reveal the password from Secret `team-x/linux-vm-login`, key `fedora`, on the corresponding cluster. Windows uses `Administrator`; its password is in `team-x/team-x-win-v100-answer`, key `password`. Passwords are unique per cluster and are not committed.
+
+[Standalone examples](examples/README.md) use `linux-vms-prod` and `windows-vms-vdi`, with complete rendered YAML bundles for console import. The existing workloads stay in `team-x`.
 
 ## Presenting
 
-1. Follow [the ARO console workflow](docs/console-workflow.md) to build a golden image before the talk.
-2. Sync the two Windows applications in ARO GitOps after the pipeline finishes and both local DataSources are ready.
-3. Rehearse using [the 15-minute runbook](docs/demo-runbook.md).
+1. Inspect the ready `team-x-linux-aro` and `team-x-linux-rosa` GitOps applications and their VMs in ACM.
+2. Follow [the ARO console workflow](docs/console-workflow.md) to build a golden image before the talk.
+3. Sync the two Windows applications in ARO GitOps after the pipeline finishes and both local DataSources are ready.
+4. Rehearse using [the 15-minute runbook](docs/demo-runbook.md).
 
 [Deployment and lifecycle details](docs/deployment.md) explain credentials, replacement image releases and cleanup. No prepared demo credential or golden PVC has a 24-hour expiry. Temporary export credentials are created during a build and removed after the copy; they are not required to run the resulting VMs. Keep the underlying clusters/storage available for the presentation.
 
@@ -47,7 +54,7 @@ flowchart LR
 |---|---|
 | `windows/` | Unattended Windows install, team customization, tests and generalization |
 | `pipelines/` | Tekton pipelines/tasks, local publication, ACM image copy, restricted ISO SCC |
-| `vm/` | Shared Windows VM definition, cloud-specific storage and placement |
+| `vm/` | Shared Windows and existing-volume Fedora VM definitions, cloud-specific storage and placement |
 | `gitops/` | Applications, namespace-scoped runtime RBAC and source clone permission |
 | `governance/` | ACM placement and inform-only team/image-version policy |
 | `console/` | Ready-to-configure PipelineRun YAML sample in the ARO console |
