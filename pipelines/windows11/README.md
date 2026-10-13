@@ -43,12 +43,12 @@ Public samples default to **license acceptance false**. No product activation is
 
 1. In ARO Console, project **image-factory**, select pipeline **windows11-developer-customize**.
 2. Import `customize-run.example.yaml` or select **Team X Windows 11 Developer Desktop — ARO** from the Console YAML samples.
-3. Set `source-image` to the ready generalized base, normally `win11-base-v1-0-0`.
+3. Set `source-image` to the ready generalized base, normally `win11-base-v1-1-0`.
 4. Choose fresh `build-id`, `image-name`, and `image-version` values. The Console customization sample uses `win11-dev-build3`, `win11-dev-v1-2-0`, and `v1.2.0` for a follow-on run.
 5. Accept the applicable Windows terms, retain `image-builder` and `workload=virt`, then create the PipelineRun.
 6. Open a completed run to show validation evidence and the published boot source while the new run works. A complete installation/customization is longer than a short presentation segment.
 
-The initial target names are **win11-base-v1-0-0** and **win11-dev-v1-0-0**, both in `image-factory`. Captured validation is stored in ConfigMap `<image-name>-evidence`. Golden disks and boot sources persist independently of PipelineRuns; the vendored tasks use `allowReplace: false` and no PipelineRun owner references for those disks.
+The current generalized base is **win11-base-v1-1-0**; the verified audience run used the earlier ready **win11-base-v1-0-0** base. The presenter VM manifest selects developer golden image **win11-dev-v1-1-0**; an earlier complete customization also produced **win11-dev-v1-0-0**. All are local to `image-factory`. Captured validation is stored in ConfigMap `<image-name>-evidence`. Golden disks and boot sources persist independently of PipelineRuns; the vendored tasks use `allowReplace: false` and no PipelineRun owner references for those disks.
 
 The VS Code settings are ordinary declarative customization inputs in `windows11-dev-source`. To change software, edit the versioned source and reinstall this package before launching a fresh customization run. Changing that ConfigMap does not alter an already-published golden disk.
 
@@ -78,9 +78,22 @@ oc --context ARO_CONTEXT apply -f console/windows11-samples.yaml
 bash scripts/validate.sh
 ```
 
-This package reuses the existing `image-factory/image-builder` account, its namespace role and the reviewed `modify-windows-iso-file` task/SCC from the earlier demo. It vendors the upstream `modify-data-object`, `create-vm-from-manifest` `wait-for-vmi-status` and `cleanup-vm` tasks at v0.26.0, with their AMD64 image pinned by digest. Their original license is in `tasks/LICENSE`. No runtime Hub resolver or remote mutable ConfigMap import is used. `image-controller.py` adds preparation, guest evidence validation and temporary input cleanup around the upstream lifecycle tasks.
+This package reuses the existing `image-factory/image-builder` account, its namespace role and the reviewed `modify-windows-iso-file` task/SCC from the earlier demo. It vendors the upstream `modify-data-object`, `create-vm-from-manifest`, `wait-for-vmi-status` and `cleanup-vm` tasks at v0.26.0, with their AMD64 image pinned by digest. Their original license is in `tasks/LICENSE`. No runtime Hub resolver or remote mutable ConfigMap import is used. `image-controller.py` adds preparation, guest evidence validation and temporary input cleanup around the upstream lifecycle tasks.
 
-Live run results will be added after Windows execution and first-boot verification complete.
+## Verified audience run
+
+**`windows11-developer-customize-j6wd8` completed successfully in 12 minutes 9 seconds: eight tasks passed, zero failed, zero cancelled, zero skipped.** This is the run to open for the audience: it includes the native VMI shutdown wait, native DataSource creation and both explicit `finally` cleanup tasks.
+
+- Fresh base run `windows11-base-image-cz7dz` also completed: five tasks passed, zero failed, with the prepared ISO modification intentionally skipped. It published Ready base `win11-base-v1-1-0`. This run was created before cleanup became explicit in `finally`; its completed builder was subsequently removed using the upstream cleanup task.
+- Ready golden image: `image-factory/win11-dev-v1-1-0`, version `v1.1.0`.
+- Evidence: `image-factory/win11-dev-v1-1-0-evidence`, confirming Windows 11 Pro, guest tools/agent, VS Code **1.141.1** system installation and CLI execution, sample project and desktop shortcuts.
+- The temporary builder `win11-dev-build2`, answer ConfigMap and validation Service were removed. Its root DataVolume/PVC and Ready DataSource remain.
+- Presenter VM: `windows-vms-vdi/win11-dev-01`, Running/Ready with guest agent connected. Its first boot reached the normal Windows lock screen with no OOBE prompts. Username **demo**; password in the same project's `win11-dev-01-answer` Secret, key **password**.
+- Earlier complete customization `windows11-developer-customize-pnnhn` also succeeded and produced `win11-dev-v1-0-0`.
+
+For a 15-minute presentation, start a new customization run early, then show GitOps and ACM while it works. Return to the completed run and the already-prepared presenter VM to show the desktop. The observed duration is a measurement of this run; ANF provisioning varied during setup. Keep the prepared VM and completed run available for the presentation.
+
+The guest agent's legacy `prettyName` field reports `Windows 10 Pro`; its `version` and `versionId` identify Windows 11, and the pipeline validates the actual Windows CIM caption as **Microsoft Windows 11 Pro**.
 
 If a builder displays a PowerShell error, publication remains blocked. The script copies its startup-resume script from the answer CD; cleanup uses `Remove-Item -Force` because that copy can retain the CD's read-only attribute. Build `windows11-base-image-fw2ms` exposed this issue and was cancelled before publication. Restarting an interrupted Windows Setup did not resume successfully, so the corrected build uses a fresh disk and reuses the already imported ISO. Do not use the failed builder disk as a golden image.
 

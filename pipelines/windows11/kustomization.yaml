@@ -4,7 +4,6 @@ kind: Kustomization
 namespace: image-factory
 resources:
 - task.yaml
-- shutdown-evidence-rbac.yaml
 - base-pipeline.yaml
 - customize-pipeline.yaml
 - tasks/modify-data-object.yaml

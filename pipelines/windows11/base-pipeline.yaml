@@ -12,16 +12,16 @@ spec:
   params:
   - name: build-id
     type: string
-    default: win11-base-build1
+    default: win11-base-build6
   - name: image-name
     type: string
-    default: win11-base-v1-0-0
+    default: win11-base-v1-2-0
   - name: image-version
     type: string
-    default: v1.0.0
+    default: v1.2.0
   - name: source-image
     type: string
-    default: win11-base-v1-0-0
+    default: win11-base-v1-2-0
   - name: iso-url
     type: string
     default: ''

@@ -1,4 +1,4 @@
-"""ARO-only Windows 11 image preparation, validation and publication."""
+"""ARO-only Windows 11 preparation, guest validation and temporary input cleanup."""
 import json
 import os
 from pathlib import Path
@@ -121,55 +121,6 @@ def validate():
     print(json.dumps(result), flush=True)
 
 
-
-def shutdown_observed(vmi):
-    if vmi:
-        return vmi.get('status', {}).get('phase') == 'Succeeded'
-    # RerunOnFailure removes completed VMIs. Preserve the native wait task's
-    # successful observation rather than mistaking absence alone for success.
-    run = os.environ.get('SHUTDOWN_PIPELINE_RUN', '')
-    if not run:
-        return False
-    vm = get('vm', BUILD)
-    if not vm or vm.get('status', {}).get('printableStatus') != 'Stopped':
-        return False
-    tasks = json.loads(oc('get', 'taskruns.tekton.dev', '-l',
-                       'tekton.dev/pipelineRun='+run+',tekton.dev/pipelineTask=wait-for-sysprep-shutdown', '-o', 'json'))
-    for task in tasks.get('items', []):
-        spec = task.get('spec', {})
-        params = {p['name']: p['value'] for p in spec.get('params', [])}
-        if (spec.get('taskRef', {}).get('name') == 'wait-for-vmi-status'
-                and params.get('vmiName') == BUILD and params.get('vmiNamespace') == NS
-                and params.get('successCondition') == 'status.phase == Succeeded'
-                and any(c['type'] == 'Succeeded' and c['status'] == 'True'
-                        for c in task.get('status', {}).get('conditions', []))):
-            return True
-    return False
-
-
-def publish():
-    evidence = get('configmap', IMAGE+'-evidence')
-    result = json.loads((evidence or {}).get('data', {}).get('validation.json', '{}'))
-    if result.get('passed') is not True or result.get('version') != VERSION or result.get('mode') != MODE:
-        raise RuntimeError('Publication requires matching captured guest evidence')
-    vmi = get('vmi', BUILD)
-    if not shutdown_observed(vmi):
-        raise RuntimeError('Publication requires observed Windows shutdown')
-    oc('patch', 'vm', BUILD, '--type=merge', '-p', '{"spec":{"runStrategy":"Halted"}}')
-    oc('delete', 'vmi', BUILD, '--ignore-not-found', '--wait=true', '--timeout=180s')
-    if get('vmi', BUILD):
-        raise RuntimeError('Refusing to publish an attached disk')
-    create('DataSource', 'cdi.kubevirt.io/v1beta1', IMAGE, spec={'source': {'pvc': {'name': BUILD+'-root', 'namespace': NS}}})
-    oc('label', 'datasource', IMAGE, 'demo.openshift.io/os=windows11',
-       'instancetype.kubevirt.io/default-preference=windows.11.virtio',
-       'instancetype.kubevirt.io/default-preference-kind=VirtualMachineClusterPreference',
-       'instancetype.kubevirt.io/default-instancetype=u1.large',
-       'instancetype.kubevirt.io/default-instancetype-kind=VirtualMachineClusterInstancetype')
-    oc('delete', 'service', BUILD, '--ignore-not-found')
-    Path(os.environ['RESULT_IMAGE']).write_text(IMAGE)
-    print('Published persistent ARO-only boot source '+IMAGE, flush=True)
-
-
 def cleanup_inputs():
     # Per-build inputs only: published disks, DataSources and evidence persist.
     oc('delete', 'configmap', BUILD+'-answer', '--ignore-not-found')
@@ -178,4 +129,4 @@ def cleanup_inputs():
 
 
 if __name__ == '__main__':
-    {'prepare': prepare, 'validate': validate, 'publish': publish, 'cleanup-inputs': cleanup_inputs}[sys.argv[1]]()
+    {'prepare': prepare, 'validate': validate, 'cleanup-inputs': cleanup_inputs}[sys.argv[1]]()

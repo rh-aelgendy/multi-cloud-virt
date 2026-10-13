@@ -10,7 +10,7 @@ These scenarios demonstrate platform configuration compliance. The golden-image 
 | `demo-02-vm-capacity` | `demo-vm-capacity` ResourceQuota missing from both projects | Creates a maximum of **two VirtualMachine objects per project**, on both clusters | “The same capacity guardrail follows the team.” Open ResourceQuotas and show `count/virtualmachines.kubevirt.io: 2`. |
 | `demo-03-golden-image-catalog` | Catalog ownership/lifecycle labels missing from the existing Windows golden DataSource | Adds `demo.openshift.io/catalog-owner=team-x` and `demo.openshift.io/lifecycle=golden`; requires `image-version=v1.0.0` | “The image catalog carries the same release metadata across clouds.” Show the DataSource labels on ARO and ROSA. |
 
-The projects already exist and are empty. Existing running VMs stay in `team-x`. The catalog policy selects existing namespaces `image-factory` on ARO and `team-x-images` on ROSA; do not create the opposite image namespace on either destination without adjusting the selector. No VM restart is needed for any of these scenarios.
+The projects already exist. `linux-vms-prod` is empty on both clusters and is the default namespace for the optional quota admission test. ARO `windows-vms-vdi` contains the Windows 11 presenter VM `win11-dev-01`; the two-VM quota leaves room for one additional VM there. The original cross-cloud VMs remain in `team-x`. The catalog policy selects existing namespaces `image-factory` on ARO and `team-x-images` on ROSA; do not create the opposite image namespace on either destination without adjusting the selector. No VM restart is needed for any of these scenarios.
 
 ## Presenter steps: about three minutes
 
