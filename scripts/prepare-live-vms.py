@@ -19,8 +19,11 @@ run = json.loads(oc('-n','image-factory','get','pipelinerun',a.pipeline_run,'-o'
 if not any(c['type']=='Succeeded' and c['status']=='True' for c in run['status'].get('conditions',[])):
     raise SystemExit('The image PipelineRun must have completed successfully')
 image = next((r['value'] for r in run['status'].get('results',[]) if r['name']=='golden-image'),None)
-if image != 'win11-dev-v1-1-0':
-    raise SystemExit('This checked-in Windows overlay expects win11-dev-v1-1-0; align its sourceRef with the successful pipeline result first')
+rendered = oc('kustomize', str(ROOT/'applicationsets/vms/kustomize/windows-vdi'))
+manifest = json.loads(subprocess.run(base+['create','--dry-run=client','-f','-','-o','json'], input=rendered, text=True, capture_output=True, check=True).stdout)
+source = manifest['spec']['dataVolumeTemplates'][0]['spec']['sourceRef']
+if image != source['name'] or source.get('namespace') != 'image-factory':
+    raise SystemExit('Align the Windows overlay sourceRef with the successful pipeline golden-image result first')
 ds = json.loads(oc('-n','image-factory','get','datasource',image,'-o','json'))
 if not any(c['type']=='Ready' and c['status']=='True' for c in ds['status'].get('conditions',[])):
     raise SystemExit('Golden DataSource is not Ready')
@@ -32,7 +35,7 @@ oc('apply','-f',str(ROOT/'applicationsets/vms/project.yaml'))
 # Reuse the existing durable ARO credential; change only its namespace allowlist.
 name = 'team-x-cluster-acm-hub-aro'
 encoded = oc('-n','openshift-gitops','get','secret',name,'-o','jsonpath={.data.namespaces}')
-namespaces = set(base64.b64decode(encoded).decode().split(','))
+namespaces = {n for n in base64.b64decode(encoded).decode().split(',') if n}
 namespaces.update(('linux-vms-prod','windows-vms-vdi'))
 oc('-n','openshift-gitops','patch','secret',name,'--type=merge','-p',json.dumps({'stringData':{'namespaces':','.join(sorted(namespaces))}}))
 subprocess.run([sys.executable,str(ROOT/'scripts/create-linux-login-secret.py'),'--context',a.context,'--namespace','linux-vms-prod','--generate'],check=True)

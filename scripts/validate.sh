@@ -3,6 +3,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 validation_tmp=$(mktemp -d)
 trap 'rm -rf "$validation_tmp"' EXIT
+oc kustomize applicationsets/vms/kustomize/linux-prod > "$validation_tmp/live-linux.yaml"
+oc kustomize applicationsets/vms/kustomize/windows-vdi > "$validation_tmp/live-windows.yaml"
 oc kustomize pipelines/windows11 > "$validation_tmp/windows11.yaml"
 oc kustomize pipelines > "$validation_tmp/pipelines.yaml"
 oc kustomize vm/overlays/aro > "$validation_tmp/aro.yaml"
@@ -10,7 +12,7 @@ oc kustomize vm/overlays/rosa > "$validation_tmp/rosa.yaml"
 oc kustomize vm/linux/overlays/aro > "$validation_tmp/linux-aro.yaml"
 oc kustomize vm/linux/overlays/rosa > "$validation_tmp/linux-rosa.yaml"
 ruby -ryaml -e '
-  files = Dir.glob("{windows,pipelines,vm,gitops,governance,tools,console,examples}/**/*.yaml") + Dir.glob(ARGV[0] + "/*.yaml")
+  files = Dir.glob("{windows,pipelines,vm,gitops,governance,tools,console,examples,applicationsets}/**/*.yaml") + Dir.glob(ARGV[0] + "/*.yaml")
   files.each { |file| YAML.load_stream(File.read(file)) }
   puts "Parsed #{files.length} YAML sources/rendered bundles"
   ["aro", "rosa", "linux-aro", "linux-rosa"].each do |cloud|
@@ -42,6 +44,13 @@ ruby -ryaml -e '
     raise "Example namespace mismatch" unless docs.all? { |d| d["kind"] == "Namespace" || d.dig("metadata", "namespace") == expected_ns }
     raise "Example Route mismatch" unless route.dig("spec", "to", "name") == service.dig("metadata", "name")
     raise "Example disk mismatch" unless vm.dig("spec", "template", "spec", "volumes", 0, "dataVolume", "name") == vm.dig("spec", "dataVolumeTemplates", 0, "metadata", "name")
+  end
+  {"live-linux" => "linux-vms-prod", "live-windows" => "windows-vms-vdi"}.each do |bundle, ns|
+    docs = YAML.load_stream(File.read("#{ARGV[0]}/#{bundle}.yaml"))
+    raise "Live overlay namespace mismatch" unless docs.all? { |d| d.dig("metadata", "namespace") == ns }
+    vm = docs.find { |d| d["kind"] == "VirtualMachine" }
+    raise "Live ARO placement missing" unless vm.dig("spec", "template", "spec", "nodeSelector") == {"workload" => "virt"}
+    raise "Live disk reference mismatch" unless vm.dig("spec", "template", "spec", "volumes", 0, "dataVolume", "name") == vm.dig("spec", "dataVolumeTemplates", 0, "metadata", "name")
   end
   docs = YAML.load_stream(File.read("#{ARGV[0]}/pipelines.yaml"))
   pipeline = docs.find { |d| d["kind"] == "Pipeline" }

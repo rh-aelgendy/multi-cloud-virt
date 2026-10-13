@@ -86,3 +86,5 @@ Offline checks cover YAML/Kustomize, selectors, disk wiring, placement and failu
 - [CDI cross-namespace clones](https://github.com/kubevirt/containerized-data-importer/blob/main/doc/clone-datavolume.md)
 
 This is a custom demo workflow. The ROSA role demonstrates image staging and consistent provisioning, not automatic disaster recovery, application-data replication or a supported cross-cloud live-migration claim. The Windows customization installs IIS and drivers; it does not establish patch or vulnerability compliance.
+
+Live audience deployment: [ARO GitOps VM ApplicationSet](applicationsets/vms/README.md), using the completed Windows 11 golden image and existing Fedora bootable volume.
