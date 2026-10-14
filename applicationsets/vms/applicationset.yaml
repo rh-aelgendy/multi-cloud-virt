@@ -33,7 +33,23 @@ spec:
       destination:
         name: acm-hub-aro
         namespace: '{{.namespace}}'
+      ignoreDifferences:
+      - group: kubevirt.io
+        kind: VirtualMachine
+        name: linux-gitops-01
+        namespace: linux-vms-prod
+        jqPathExpressions:
+        - '.spec.template.spec.volumes[]? | select(.name == "cloudinit") | .cloudInitNoCloud.userData'
+      - group: kubevirt.io
+        kind: VirtualMachine
+        name: win11-gitops-01
+        namespace: windows-vms-vdi
+        jqPathExpressions:
+        - '.spec.template.spec.volumes[]? | select(.name == "console-login-display" or .name == "cloudinitdisk")'
+        - '.spec.template.spec.domain.devices.disks[]? | select(.name == "cloudinitdisk")'
       syncPolicy:
+        syncOptions:
+        - RespectIgnoreDifferences=true
         automated:
           enabled: true
           selfHeal: true

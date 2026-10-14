@@ -27,7 +27,17 @@ spec:
       destination:
         name: "{{.cluster}}"
         namespace: team-x
+      ignoreDifferences:
+      - group: kubevirt.io
+        kind: VirtualMachine
+        name: team-x-win-v100
+        namespace: team-x
+        jqPathExpressions:
+        - '.spec.template.spec.volumes[]? | select(.name == "console-login-display" or .name == "cloudinitdisk")'
+        - '.spec.template.spec.domain.devices.disks[]? | select(.name == "cloudinitdisk")'
       syncPolicy:
+        syncOptions:
+        - RespectIgnoreDifferences=true
         automated:
           selfHeal: true
           prune: false

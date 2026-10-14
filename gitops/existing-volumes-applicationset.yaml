@@ -27,7 +27,16 @@ spec:
       destination:
         name: "{{.cluster}}"
         namespace: team-x
+      ignoreDifferences:
+      - group: kubevirt.io
+        kind: VirtualMachine
+        name: team-x-linux
+        namespace: team-x
+        jqPathExpressions:
+        - '.spec.template.spec.volumes[]? | select(.name == "cloudinit") | .cloudInitNoCloud.userData'
       syncPolicy:
+        syncOptions:
+        - RespectIgnoreDifferences=true
         automated:
           selfHeal: true
           prune: false
