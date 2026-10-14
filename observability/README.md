@@ -21,7 +21,7 @@ This is a transparent demo heuristic. ACM's native virtualization right-sizing a
 1. Show both oversized Linux VMs as candidates, grouped by cluster/project/VM. Compare 8 assigned vCPU and 16 GiB with actual use.
 2. In the target cluster Console, Virtualization → VirtualMachines → `linux-vms-prod`, select that cluster's `linux-oversized-*` VM and **Stop**. Wait until Stopped.
 3. Edit its YAML: `spec.template.spec.domain.cpu.cores: 2`, `domain.resources.requests.cpu: "2"`, `domain.resources.requests.memory: 2Gi`, and `domain.memory.guest: 2Gi`. Save and **Start**. Alternatively apply the matching `vm-*-optimized.json` while stopped, then start.
-4. Verify Running/Ready and the guest HTTP readiness probe. Show the same dashboard's assigned-capacity step change. The 15-minute candidate window retains prior samples until they age out; a lightly used 2-core VM may still qualify, which is valid.
+4. Verify Running/Ready and open Networking → Routes → `linux-oversized-aro` or `linux-oversized-rosa`; `/ready.json` should return HTTP 200 with the correct cloud/hostname. Stopping the VM briefly interrupts this fixture web server. Show the same dashboard's assigned-capacity step change. The 15-minute candidate window retains prior samples until they age out; a lightly used 2-core VM may still qualify, which is valid.
 5. Reset after the session: Stop → apply matching `vm-aro.json` or `vm-rosa.json` → Start. Leave oversized overnight to collect history before the next session.
 
 The illustrative change reduces assigned guest capacity by 6 vCPU and 14 GiB per VM. CPU requests are explicitly equal to assigned vCPU for these fixtures, so the scheduling reservation also decreases. This alone does not lower a cloud bill; the backing nodes and billing have not changed.
@@ -48,4 +48,6 @@ oc apply -f observability/multiclusterobservability.json
 python3 scripts/configure-vm-observability.py
 ```
 
-For each cluster, use its context and apply `observability/clone-rbac.json`, run `scripts/create-linux-login-secret.py --context CONTEXT --namespace linux-vms-prod --generate`, then apply that cluster's `observability/vm-aro.json` or `observability/vm-rosa.json`. The project must exist first. All manifests are JSON, which is valid YAML and can be pasted into Console Import YAML. Do not apply the entire directory at once: oversized and optimized examples target the same VM.
+For each cluster, use its context and apply `observability/clone-rbac.json`, run `scripts/create-linux-login-secret.py --context CONTEXT --namespace linux-vms-prod --generate`, then apply that cluster's `observability/vm-aro.json` or `observability/vm-rosa.json`, plus its matching `service-aro.json` or `service-rosa.json`. The project must exist first. All manifests are JSON, which is valid YAML and can be pasted into Console Import YAML. Do not apply the entire directory at once: oversized and optimized examples target the same VM.
+
+Read-only rehearsal check: `python3 scripts/verify-vm-observability.py --require-candidates`. This executes the exact dashboard queries against central Thanos and requires both dedicated fixture VMs to have real telemetry and satisfy the displayed candidate criteria. It creates no resources or samples.

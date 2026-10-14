@@ -1,0 +1,53 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "linux-oversized-rosa",
+        "namespace": "linux-vms-prod",
+        "labels": {
+          "demo": "vm-right-sizing"
+        }
+      },
+      "spec": {
+        "selector": {
+          "app": "linux-oversized-rosa"
+        },
+        "ports": [
+          {
+            "name": "http",
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "route.openshift.io/v1",
+      "kind": "Route",
+      "metadata": {
+        "name": "linux-oversized-rosa",
+        "namespace": "linux-vms-prod",
+        "labels": {
+          "demo": "vm-right-sizing"
+        }
+      },
+      "spec": {
+        "to": {
+          "kind": "Service",
+          "name": "linux-oversized-rosa"
+        },
+        "port": {
+          "targetPort": "http"
+        },
+        "tls": {
+          "termination": "edge",
+          "insecureEdgeTerminationPolicy": "Redirect"
+        }
+      }
+    }
+  ]
+}
