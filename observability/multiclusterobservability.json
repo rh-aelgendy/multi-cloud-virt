@@ -1,0 +1,212 @@
+{
+  "apiVersion": "observability.open-cluster-management.io/v1beta2",
+  "kind": "MultiClusterObservability",
+  "metadata": {
+    "name": "observability",
+    "labels": {
+      "demo": "vm-right-sizing"
+    },
+    "annotations": {
+      "observability.open-cluster-management.io/right-sizing-capable": "v1"
+    }
+  },
+  "spec": {
+    "instanceSize": "minimal",
+    "imagePullSecret": "vm-observability-pull-secret",
+    "advanced": {
+      "alertmanager": {
+        "replicas": 1,
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "128Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          }
+        }
+      },
+      "compact": {
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "512Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "2Gi"
+          }
+        }
+      },
+      "grafana": {
+        "replicas": 1,
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "128Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          }
+        }
+      },
+      "observatoriumAPI": {
+        "replicas": 1,
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "128Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          }
+        }
+      },
+      "query": {
+        "replicas": 1,
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "128Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "2Gi"
+          }
+        }
+      },
+      "queryFrontend": {
+        "replicas": 1,
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "128Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          }
+        }
+      },
+      "queryFrontendMemcached": {
+        "replicas": 1,
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "128Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          }
+        },
+        "memoryLimitMb": 128
+      },
+      "rbacQueryProxy": {
+        "replicas": 1,
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "128Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          }
+        }
+      },
+      "receive": {
+        "replicas": 1,
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "512Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "2Gi"
+          }
+        }
+      },
+      "rule": {
+        "replicas": 1,
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "128Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          }
+        }
+      },
+      "store": {
+        "replicas": 1,
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "512Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "2Gi"
+          }
+        }
+      },
+      "storeMemcached": {
+        "replicas": 1,
+        "resources": {
+          "requests": {
+            "cpu": "25m",
+            "memory": "128Mi"
+          },
+          "limits": {
+            "cpu": "1",
+            "memory": "1Gi"
+          }
+        },
+        "memoryLimitMb": 128
+      }
+    },
+    "observabilityAddonSpec": {
+      "enableMetrics": true,
+      "interval": 30
+    },
+    "storageConfig": {
+      "storageClass": "managed-csi",
+      "metricObjectStorage": {
+        "name": "vm-observability-object-storage",
+        "key": "thanos.yaml"
+      },
+      "alertmanagerStorageSize": "1Gi",
+      "compactStorageSize": "10Gi",
+      "receiveStorageSize": "10Gi",
+      "ruleStorageSize": "1Gi",
+      "storeStorageSize": "5Gi"
+    },
+    "capabilities": {
+      "platform": {
+        "metrics": {
+          "default": {
+            "enabled": true
+          },
+          "ui": {
+            "enabled": true
+          }
+        },
+        "analytics": {
+          "namespaceRightSizingRecommendation": {
+            "enabled": true
+          },
+          "virtualizationRightSizingRecommendation": {
+            "enabled": true
+          }
+        }
+      }
+    }
+  }
+}

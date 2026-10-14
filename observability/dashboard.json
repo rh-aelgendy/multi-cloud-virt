@@ -1,0 +1,459 @@
+{
+  "apiVersion": "perses.dev/v1alpha2",
+  "kind": "PersesDashboard",
+  "metadata": {
+    "name": "vm-fleet-right-sizing",
+    "namespace": "open-cluster-management-observability",
+    "labels": {
+      "demo": "vm-right-sizing"
+    }
+  },
+  "spec": {
+    "config": {
+      "display": {
+        "name": "VM Fleet \u2014 Right-sizing opportunities",
+        "description": "Real KubeVirt metrics across ARO and ROSA. Candidate = CPU peak <20% AND guest memory peak <40% over the observed last 15 minutes, with at least 20 guest memory samples. Heuristic review candidates, not ACM VM recommendations. Native ACM VM recommendations are available separately in project observability-analytics. Guest used memory excludes reclaimable cache; no data is unavailable, never zero. 2 vCPU/2 GiB is a tested lab example, not a production recommendation. Reducing assigned capacity does not alone reduce cloud billing."
+      },
+      "duration": "30m",
+      "refreshInterval": "30s",
+      "panels": {
+        "0": {
+          "kind": "Panel",
+          "spec": {
+            "display": {
+              "name": "Assigned vCPU versus CPU use (cores)"
+            },
+            "plugin": {
+              "kind": "TimeSeriesChart",
+              "spec": {
+                "legend": {
+                  "position": "bottom",
+                  "mode": "list"
+                },
+                "yAxis": {
+                  "format": {
+                    "unit": "decimal"
+                  }
+                }
+              }
+            },
+            "queries": [
+              {
+                "kind": "TimeSeriesQuery",
+                "spec": {
+                  "plugin": {
+                    "kind": "PrometheusTimeSeriesQuery",
+                    "spec": {
+                      "datasource": {
+                        "kind": "PrometheusDatasource",
+                        "name": "rbac-query-proxy-datasource"
+                      },
+                      "query": "count by (cluster,namespace,name) (max by (cluster,namespace,name,id) (kubevirt_vmi_vcpu_seconds_total{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}))",
+                      "seriesNameFormat": "Assigned \u2014 {{cluster}} / {{namespace}} / {{name}}"
+                    }
+                  }
+                }
+              },
+              {
+                "kind": "TimeSeriesQuery",
+                "spec": {
+                  "plugin": {
+                    "kind": "PrometheusTimeSeriesQuery",
+                    "spec": {
+                      "datasource": {
+                        "kind": "PrometheusDatasource",
+                        "name": "rbac-query-proxy-datasource"
+                      },
+                      "query": "max by (cluster,namespace,name) (rate(kubevirt_vmi_cpu_usage_seconds_total{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}[5m]))",
+                      "seriesNameFormat": "Used \u2014 {{cluster}} / {{namespace}} / {{name}}"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "1": {
+          "kind": "Panel",
+          "spec": {
+            "display": {
+              "name": "Assigned RAM versus guest used RAM (GiB)"
+            },
+            "plugin": {
+              "kind": "TimeSeriesChart",
+              "spec": {
+                "legend": {
+                  "position": "bottom",
+                  "mode": "list"
+                },
+                "yAxis": {
+                  "format": {
+                    "unit": "decimal"
+                  }
+                }
+              }
+            },
+            "queries": [
+              {
+                "kind": "TimeSeriesQuery",
+                "spec": {
+                  "plugin": {
+                    "kind": "PrometheusTimeSeriesQuery",
+                    "spec": {
+                      "datasource": {
+                        "kind": "PrometheusDatasource",
+                        "name": "rbac-query-proxy-datasource"
+                      },
+                      "query": "(max by (cluster,namespace,name) (kubevirt_vmi_memory_domain_bytes{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"})) / 1073741824",
+                      "seriesNameFormat": "Assigned \u2014 {{cluster}} / {{namespace}} / {{name}}"
+                    }
+                  }
+                }
+              },
+              {
+                "kind": "TimeSeriesQuery",
+                "spec": {
+                  "plugin": {
+                    "kind": "PrometheusTimeSeriesQuery",
+                    "spec": {
+                      "datasource": {
+                        "kind": "PrometheusDatasource",
+                        "name": "rbac-query-proxy-datasource"
+                      },
+                      "query": "(max by (cluster,namespace,name) (kubevirt_vmi_memory_used_bytes{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"})) / 1073741824",
+                      "seriesNameFormat": "Guest used \u2014 {{cluster}} / {{namespace}} / {{name}}"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "2": {
+          "kind": "Panel",
+          "spec": {
+            "display": {
+              "name": "CPU utilization of assigned vCPU (%)"
+            },
+            "plugin": {
+              "kind": "TimeSeriesChart",
+              "spec": {
+                "legend": {
+                  "position": "bottom",
+                  "mode": "list"
+                },
+                "yAxis": {
+                  "format": {
+                    "unit": "decimal"
+                  }
+                }
+              }
+            },
+            "queries": [
+              {
+                "kind": "TimeSeriesQuery",
+                "spec": {
+                  "plugin": {
+                    "kind": "PrometheusTimeSeriesQuery",
+                    "spec": {
+                      "datasource": {
+                        "kind": "PrometheusDatasource",
+                        "name": "rbac-query-proxy-datasource"
+                      },
+                      "query": "100 * (max by (cluster,namespace,name) (rate(kubevirt_vmi_cpu_usage_seconds_total{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}[5m]))) / (count by (cluster,namespace,name) (max by (cluster,namespace,name,id) (kubevirt_vmi_vcpu_seconds_total{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"})))",
+                      "seriesNameFormat": "CPU % \u2014 {{cluster}} / {{namespace}} / {{name}}"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "3": {
+          "kind": "Panel",
+          "spec": {
+            "display": {
+              "name": "Guest memory utilization (%)"
+            },
+            "plugin": {
+              "kind": "TimeSeriesChart",
+              "spec": {
+                "legend": {
+                  "position": "bottom",
+                  "mode": "list"
+                },
+                "yAxis": {
+                  "format": {
+                    "unit": "decimal"
+                  }
+                }
+              }
+            },
+            "queries": [
+              {
+                "kind": "TimeSeriesQuery",
+                "spec": {
+                  "plugin": {
+                    "kind": "PrometheusTimeSeriesQuery",
+                    "spec": {
+                      "datasource": {
+                        "kind": "PrometheusDatasource",
+                        "name": "rbac-query-proxy-datasource"
+                      },
+                      "query": "100 * (max by (cluster,namespace,name) (kubevirt_vmi_memory_used_bytes{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"})) / (max by (cluster,namespace,name) (kubevirt_vmi_memory_domain_bytes{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}))",
+                      "seriesNameFormat": "Memory % \u2014 {{cluster}} / {{namespace}} / {{name}}"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "4": {
+          "kind": "Panel",
+          "spec": {
+            "display": {
+              "name": "Right-sizing candidates (1 = review)"
+            },
+            "plugin": {
+              "kind": "TimeSeriesChart",
+              "spec": {
+                "legend": {
+                  "position": "bottom",
+                  "mode": "list"
+                },
+                "yAxis": {
+                  "format": {
+                    "unit": "decimal"
+                  }
+                }
+              }
+            },
+            "queries": [
+              {
+                "kind": "TimeSeriesQuery",
+                "spec": {
+                  "plugin": {
+                    "kind": "PrometheusTimeSeriesQuery",
+                    "spec": {
+                      "datasource": {
+                        "kind": "PrometheusDatasource",
+                        "name": "rbac-query-proxy-datasource"
+                      },
+                      "query": "((max_over_time((100 * (max by (cluster,namespace,name) (rate(kubevirt_vmi_cpu_usage_seconds_total{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}[5m]))) / (count by (cluster,namespace,name) (max by (cluster,namespace,name,id) (kubevirt_vmi_vcpu_seconds_total{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}))))[15m:30s]) < 20) and on (cluster,namespace,name) (max_over_time((100 * (max by (cluster,namespace,name) (kubevirt_vmi_memory_used_bytes{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"})) / (max by (cluster,namespace,name) (kubevirt_vmi_memory_domain_bytes{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"})))[15m:30s]) < 40) and on (cluster,namespace,name) (max by (cluster,namespace,name) (count_over_time(kubevirt_vmi_memory_used_bytes{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}[15m])) >= 20)) * 0 + 1",
+                      "seriesNameFormat": "Candidate \u2014 {{cluster}} / {{namespace}} / {{name}}"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "5": {
+          "kind": "Panel",
+          "spec": {
+            "display": {
+              "name": "Running VM inventory"
+            },
+            "plugin": {
+              "kind": "TimeSeriesChart",
+              "spec": {
+                "legend": {
+                  "position": "bottom",
+                  "mode": "list"
+                },
+                "yAxis": {
+                  "format": {
+                    "unit": "decimal"
+                  }
+                }
+              }
+            },
+            "queries": [
+              {
+                "kind": "TimeSeriesQuery",
+                "spec": {
+                  "plugin": {
+                    "kind": "PrometheusTimeSeriesQuery",
+                    "spec": {
+                      "datasource": {
+                        "kind": "PrometheusDatasource",
+                        "name": "rbac-query-proxy-datasource"
+                      },
+                      "query": "max by (cluster,namespace,name) (kubevirt_vmi_info{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\",phase=\"running\"})",
+                      "seriesNameFormat": "Running \u2014 {{cluster}} / {{namespace}} / {{name}}"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "6": {
+          "kind": "Panel",
+          "spec": {
+            "display": {
+              "name": "Observed guest memory samples (last 15 minutes)"
+            },
+            "plugin": {
+              "kind": "TimeSeriesChart",
+              "spec": {
+                "legend": {
+                  "position": "bottom",
+                  "mode": "list"
+                },
+                "yAxis": {
+                  "format": {
+                    "unit": "decimal"
+                  }
+                }
+              }
+            },
+            "queries": [
+              {
+                "kind": "TimeSeriesQuery",
+                "spec": {
+                  "plugin": {
+                    "kind": "PrometheusTimeSeriesQuery",
+                    "spec": {
+                      "datasource": {
+                        "kind": "PrometheusDatasource",
+                        "name": "rbac-query-proxy-datasource"
+                      },
+                      "query": "max by (cluster,namespace,name) (count_over_time(kubevirt_vmi_memory_used_bytes{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}[15m]))",
+                      "seriesNameFormat": "Samples \u2014 {{cluster}} / {{namespace}} / {{name}}"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "7": {
+          "kind": "Panel",
+          "spec": {
+            "display": {
+              "name": "Guest swap-out rate (bytes/s)"
+            },
+            "plugin": {
+              "kind": "TimeSeriesChart",
+              "spec": {
+                "legend": {
+                  "position": "bottom",
+                  "mode": "list"
+                },
+                "yAxis": {
+                  "format": {
+                    "unit": "decimal"
+                  }
+                }
+              }
+            },
+            "queries": [
+              {
+                "kind": "TimeSeriesQuery",
+                "spec": {
+                  "plugin": {
+                    "kind": "PrometheusTimeSeriesQuery",
+                    "spec": {
+                      "datasource": {
+                        "kind": "PrometheusDatasource",
+                        "name": "rbac-query-proxy-datasource"
+                      },
+                      "query": "max by (cluster,namespace,name) (rate(kubevirt_vmi_memory_swap_out_traffic_bytes{namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}[5m]))",
+                      "seriesNameFormat": "Swap out \u2014 {{cluster}} / {{namespace}} / {{name}}"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "layouts": [
+        {
+          "kind": "Grid",
+          "spec": {
+            "display": {
+              "title": "One operating model: measure \u2192 identify \u2192 resize \u2192 verify"
+            },
+            "items": [
+              {
+                "x": 0,
+                "y": 0,
+                "width": 12,
+                "height": 8,
+                "content": {
+                  "$ref": "#/spec/panels/0"
+                }
+              },
+              {
+                "x": 12,
+                "y": 0,
+                "width": 12,
+                "height": 8,
+                "content": {
+                  "$ref": "#/spec/panels/1"
+                }
+              },
+              {
+                "x": 0,
+                "y": 8,
+                "width": 12,
+                "height": 8,
+                "content": {
+                  "$ref": "#/spec/panels/2"
+                }
+              },
+              {
+                "x": 12,
+                "y": 8,
+                "width": 12,
+                "height": 8,
+                "content": {
+                  "$ref": "#/spec/panels/3"
+                }
+              },
+              {
+                "x": 0,
+                "y": 16,
+                "width": 12,
+                "height": 8,
+                "content": {
+                  "$ref": "#/spec/panels/4"
+                }
+              },
+              {
+                "x": 12,
+                "y": 16,
+                "width": 12,
+                "height": 8,
+                "content": {
+                  "$ref": "#/spec/panels/5"
+                }
+              },
+              {
+                "x": 0,
+                "y": 24,
+                "width": 12,
+                "height": 8,
+                "content": {
+                  "$ref": "#/spec/panels/6"
+                }
+              },
+              {
+                "x": 12,
+                "y": 24,
+                "width": 12,
+                "height": 8,
+                "content": {
+                  "$ref": "#/spec/panels/7"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

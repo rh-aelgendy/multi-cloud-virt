@@ -88,3 +88,7 @@ Offline checks cover YAML/Kustomize, selectors, disk wiring, placement and failu
 This is a custom demo workflow. The ROSA role demonstrates image staging and consistent provisioning, not automatic disaster recovery, application-data replication or a supported cross-cloud live-migration claim. The Windows customization installs IIS and drivers; it does not establish patch or vulnerability compliance.
 
 Live audience deployment: [ARO GitOps VM ApplicationSet](applicationsets/vms/README.md), using the completed Windows 11 golden image and existing Fedora bootable volume.
+
+### Fleet VM right-sizing
+
+See [the observability demo](observability/README.md) for ACM/Perses fleet dashboards, native VM overestimation analytics, and dedicated oversized Linux VMs on ARO and ROSA. The presenter guide includes the live Console resize and reset steps.

@@ -1,0 +1,136 @@
+{
+  "apiVersion": "kubevirt.io/v1",
+  "kind": "VirtualMachine",
+  "metadata": {
+    "name": "linux-oversized-aro",
+    "namespace": "linux-vms-prod",
+    "labels": {
+      "demo": "vm-right-sizing",
+      "owner": "team-x"
+    }
+  },
+  "spec": {
+    "runStrategy": "RerunOnFailure",
+    "dataVolumeTemplates": [
+      {
+        "metadata": {
+          "name": "linux-oversized-aro-root"
+        },
+        "spec": {
+          "sourceRef": {
+            "kind": "DataSource",
+            "name": "fedora",
+            "namespace": "openshift-virtualization-os-images"
+          },
+          "storage": {
+            "storageClassName": "anf",
+            "accessModes": [
+              "ReadWriteMany"
+            ],
+            "volumeMode": "Filesystem",
+            "resources": {
+              "requests": {
+                "storage": "50Gi"
+              }
+            }
+          }
+        }
+      }
+    ],
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "linux-oversized-aro",
+          "owner": "team-x",
+          "demo": "vm-right-sizing"
+        }
+      },
+      "spec": {
+        "hostname": "oversized-aro",
+        "domain": {
+          "cpu": {
+            "cores": 8
+          },
+          "resources": {
+            "requests": {
+              "cpu": "8",
+              "memory": "16Gi"
+            }
+          },
+          "devices": {
+            "disks": [
+              {
+                "name": "root",
+                "disk": {
+                  "bus": "virtio"
+                }
+              },
+              {
+                "name": "cloudinit",
+                "disk": {
+                  "bus": "virtio"
+                }
+              }
+            ],
+            "interfaces": [
+              {
+                "name": "default",
+                "masquerade": {},
+                "model": "virtio"
+              }
+            ]
+          },
+          "memory": {
+            "guest": "16Gi"
+          }
+        },
+        "networks": [
+          {
+            "name": "default",
+            "pod": {}
+          }
+        ],
+        "volumes": [
+          {
+            "name": "root",
+            "dataVolume": {
+              "name": "linux-oversized-aro-root"
+            }
+          },
+          {
+            "name": "cloudinit",
+            "cloudInitNoCloud": {
+              "userData": "#cloud-config\nwrite_files:\n  - path: /opt/team-x/app.py\n    permissions: '0644'\n    content: |\n      import http.server, json, socket\n      host = socket.gethostname()\n      cloud = 'Azure / ARO' if 'aro' in host else 'AWS / ROSA HCP'\n      class App(http.server.BaseHTTPRequestHandler):\n          def do_GET(self):\n              self.send_response(200)\n              self.send_header('Content-Type', 'application/json' if self.path == '/ready.json' else 'text/html; charset=utf-8')\n              self.end_headers()\n              if self.path == '/ready.json':\n                  body = json.dumps({'team':'team-x', 'cloud':cloud, 'hostname':host, 'bootSource':'existing Fedora DataSource'})\n              else:\n                  body = '<html><head><title>Team X VM</title><style>body{background:#101820;color:white;font:24px sans-serif;padding:70px}h1{color:#73d8ff}</style></head><body><h1>Team X | One Operating Model</h1><p>Cloud: '+cloud+'</p><p>Hostname: '+host+'</p><p>Boot source: existing Fedora bootable volume</p><p>Right-sizing fixture: lightly used web server</p></body></html>'\n              self.wfile.write(body.encode())\n      http.server.HTTPServer(('0.0.0.0',8080),App).serve_forever()\n  - path: /etc/systemd/system/team-x-demo.service\n    content: |\n      [Unit]\n      Description=Team X VM demo\n      After=network-online.target\n      Wants=network-online.target\n      [Service]\n      ExecStart=/usr/bin/python3 /opt/team-x/app.py\n      Restart=always\n      [Install]\n      WantedBy=multi-user.target\nruncmd:\n  - [systemctl, daemon-reload]\n  - [systemctl, enable, --now, team-x-demo.service]\n"
+            }
+          }
+        ],
+        "readinessProbe": {
+          "httpGet": {
+            "path": "/ready.json",
+            "port": 8080
+          },
+          "initialDelaySeconds": 30,
+          "periodSeconds": 10,
+          "timeoutSeconds": 5
+        },
+        "accessCredentials": [
+          {
+            "userPassword": {
+              "source": {
+                "secret": {
+                  "secretName": "linux-vm-login"
+                }
+              },
+              "propagationMethod": {
+                "qemuGuestAgent": {}
+              }
+            }
+          }
+        ],
+        "nodeSelector": {
+          "workload": "virt"
+        }
+      }
+    }
+  }
+}

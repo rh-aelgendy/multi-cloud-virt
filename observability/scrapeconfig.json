@@ -1,0 +1,33 @@
+{
+  "apiVersion": "monitoring.rhobs/v1alpha1",
+  "kind": "ScrapeConfig",
+  "metadata": {
+    "name": "vm-fleet-metrics",
+    "namespace": "open-cluster-management-observability",
+    "labels": {
+      "demo": "vm-right-sizing",
+      "app.kubernetes.io/component": "platform-metrics-collector"
+    }
+  },
+  "spec": {
+    "jobName": "vm-fleet-metrics",
+    "metricsPath": "/federate",
+    "scrapeInterval": "30s",
+    "params": {
+      "match[]": [
+        "{__name__=\"kubevirt_vmi_vcpu_seconds_total\",namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}",
+        "{__name__=\"kubevirt_vmi_cpu_usage_seconds_total\",namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}",
+        "{__name__=\"kubevirt_vmi_memory_domain_bytes\",namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}",
+        "{__name__=\"kubevirt_vmi_memory_used_bytes\",namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}",
+        "{__name__=\"kubevirt_vmi_memory_swap_out_traffic_bytes\",namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}",
+        "{__name__=\"kubevirt_vmi_info\",namespace=~\"linux-vms-prod|windows-vms-vdi|team-x\"}"
+      ]
+    },
+    "metricRelabelings": [
+      {
+        "action": "labeldrop",
+        "regex": "managed_cluster"
+      }
+    ]
+  }
+}
